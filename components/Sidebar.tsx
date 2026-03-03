@@ -1,13 +1,15 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { logout } from '@/lib/api-client';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
-  { href: '/cases', label: 'Cases', icon: CasesIcon, badge: '2' },
+  { href: '/cases', label: 'Cases', icon: CasesIcon },
   { href: '/upload', label: 'Upload Excel', icon: UploadIcon },
-  { href: '/reports', label: 'Reports', icon: ReportsIcon, badge: '2' },
+  { href: '/reports', label: 'Reports', icon: ReportsIcon },
   { href: '/executives', label: 'Executives', icon: ExecutivesIcon },
   { href: '/audit', label: 'Audit Trail', icon: AuditIcon },
 ];
@@ -77,6 +79,27 @@ function AuditIcon() {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('user');
+      if (stored) setUser(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch {}
+    localStorage.removeItem('user');
+    router.push('/login');
+  };
+
+  const initials = user?.name
+    ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'AU';
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-[240px] bg-navy-900 text-white flex flex-col z-50">
@@ -114,9 +137,6 @@ export default function Sidebar() {
                 >
                   <item.icon />
                   {item.label}
-                  {'badge' in item && item.badge && (
-                    <span className="ml-auto bg-amber-500 text-navy-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{item.badge}</span>
-                  )}
                 </Link>
               </li>
             );
@@ -124,18 +144,27 @@ export default function Sidebar() {
         </ul>
       </nav>
 
-      {/* User */}
+      {/* User + Logout */}
       <div className="px-4 py-4 border-t border-white/10">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-3">
           <div className="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-xs font-bold">
-            AU
+            {initials}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-white truncate">Admin User</p>
-            <p className="text-[10px] text-slate-400">Back Office</p>
+            <p className="text-xs font-medium text-white truncate">{user?.name || 'Admin User'}</p>
+            <p className="text-[10px] text-slate-400 capitalize">{user?.role || 'Admin'}</p>
           </div>
           <div className="w-2 h-2 rounded-full bg-emerald-400" />
         </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" /><polyline points="16,17 21,12 16,7" /><line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Sign Out
+        </button>
       </div>
     </aside>
   );
