@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { logout } from '@/lib/api-client';
-import { safeGetItem, safeRemoveItem } from '@/lib/storage';
+import { logout, getMe } from '@/lib/api-client';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
@@ -84,17 +83,13 @@ export default function Sidebar() {
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = safeGetItem('user');
-      if (stored) setUser(JSON.parse(stored));
-    } catch {}
+    getMe().then(data => setUser(data.user)).catch(() => {});
   }, []);
 
   const handleLogout = async () => {
     try {
       await logout();
     } catch {}
-    safeRemoveItem('user');
     router.push('/login');
   };
 

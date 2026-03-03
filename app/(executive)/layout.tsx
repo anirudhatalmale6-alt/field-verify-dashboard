@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { safeGetItem } from '@/lib/storage';
+import { getMe } from '@/lib/api-client';
 
 export default function ExecutiveLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -11,21 +11,17 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
   const [user, setUser] = useState<{ name: string; role: string; avatar: string } | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = safeGetItem('user');
-      if (!stored) {
+    getMe()
+      .then(data => {
+        if (data.user.role !== 'executive') {
+          router.push('/dashboard');
+          return;
+        }
+        setUser(data.user);
+      })
+      .catch(() => {
         router.push('/login');
-        return;
-      }
-      const u = JSON.parse(stored);
-      if (u.role !== 'executive') {
-        router.push('/dashboard');
-        return;
-      }
-      setUser(u);
-    } catch {
-      router.push('/login');
-    }
+      });
   }, [router]);
 
   if (!user) return null;
