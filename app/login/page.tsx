@@ -2,36 +2,46 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { login } from '@/lib/api-client';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@fieldverify.com');
-  const [password, setPassword] = useState('demo123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      router.push('/dashboard');
-    }, 800);
+    setError('');
+    try {
+      const data = await login(email, password);
+      // Store user info in localStorage for client access
+      localStorage.setItem('user', JSON.stringify(data.user));
+      // Redirect based on role
+      if (data.user.role === 'executive') {
+        router.push('/exec/cases');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (err) {
+      setError((err as Error).message || 'Invalid credentials');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex">
       {/* Left — Branding Panel */}
       <div className="hidden lg:flex lg:w-[55%] bg-navy-900 relative overflow-hidden items-center justify-center">
-        {/* Decorative circles */}
         <div className="absolute top-[-120px] right-[-80px] w-[400px] h-[400px] rounded-full bg-teal-600/10" />
         <div className="absolute bottom-[-60px] left-[-100px] w-[300px] h-[300px] rounded-full bg-teal-600/5" />
         <div className="absolute top-[40%] left-[15%] w-[180px] h-[180px] rounded-full border border-teal-600/20" />
 
-        {/* Grid pattern */}
         <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
-          `,
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
           backgroundSize: '40px 40px'
         }} />
 
@@ -44,8 +54,8 @@ export default function LoginPage() {
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-display font-bold text-white">FieldVerify</h1>
-              <p className="text-xs text-teal-400 tracking-widest uppercase font-semibold">Pro Dashboard</p>
+              <h1 className="text-2xl font-display font-bold text-white">Koteshwari</h1>
+              <p className="text-xs text-teal-400 tracking-widest uppercase font-semibold">Onfield Services</p>
             </div>
           </div>
 
@@ -82,7 +92,6 @@ export default function LoginPage() {
       {/* Right — Login Form */}
       <div className="flex-1 flex items-center justify-center px-6 lg:px-16 bg-white">
         <div className="w-full max-w-sm">
-          {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center">
               <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -90,13 +99,19 @@ export default function LoginPage() {
                 <path d="M8 18V12h4v6" />
               </svg>
             </div>
-            <h1 className="text-xl font-display font-bold text-navy-900">FieldVerify Pro</h1>
+            <h1 className="text-xl font-display font-bold text-navy-900">Koteshwari Onfield</h1>
           </div>
 
           <div className="mb-8">
             <h2 className="text-2xl font-display font-bold text-navy-900 mb-1">Welcome back</h2>
             <p className="text-sm text-slate-500">Sign in to access the verification dashboard</p>
           </div>
+
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200">
+              <p className="text-xs text-red-600 font-medium">{error}</p>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
@@ -106,7 +121,8 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-                placeholder="admin@fieldverify.com"
+                placeholder="admin@koteshwari.com"
+                required
               />
             </div>
             <div>
@@ -117,6 +133,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
                 placeholder="Enter password"
+                required
               />
             </div>
 
@@ -125,9 +142,6 @@ export default function LoginPage() {
                 <input type="checkbox" defaultChecked className="rounded border-slate-300 text-teal-600 focus:ring-teal-500" />
                 Remember me
               </label>
-              <button type="button" className="text-xs text-teal-600 hover:text-teal-700 font-medium">
-                Forgot password?
-              </button>
             </div>
 
             <button
@@ -150,11 +164,15 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 p-3 rounded-lg bg-slate-50 border border-slate-100">
-            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Demo Credentials</p>
-            <p className="text-xs text-slate-600">
-              <span className="font-medium">Email:</span> admin@fieldverify.com<br/>
-              <span className="font-medium">Password:</span> demo123
-            </p>
+            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Login Credentials</p>
+            <div className="space-y-1">
+              <p className="text-xs text-slate-600">
+                <span className="font-medium">Admin:</span> admin@koteshwari.com / admin123
+              </p>
+              <p className="text-xs text-slate-600">
+                <span className="font-medium">Executive:</span> avinash@koteshwari.com / exec123
+              </p>
+            </div>
           </div>
         </div>
       </div>
