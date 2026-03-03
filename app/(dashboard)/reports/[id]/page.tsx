@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { reports, getStatusColor, getStatusLabel, formatDateTime, formatDate } from '@/lib/mock-data';
+import { reports, getStatusColor, getStatusLabel, getCategoryColor, formatDateTime, formatDate } from '@/lib/mock-data';
 import { useParams } from 'next/navigation';
 
 export default function ReportDetailPage() {
@@ -25,13 +25,14 @@ export default function ReportDetailPage() {
 
   return (
     <div className="p-6 lg:p-8">
-      {/* Breadcrumb & Header */}
+      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
         <Link href="/reports" className="hover:text-teal-600 transition-colors">Reports</Link>
         <span>/</span>
-        <span className="text-navy-900 font-medium">{report.caseId}</span>
+        <span className="text-navy-900 font-medium">{report.firNo}</span>
       </div>
 
+      {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-3">
@@ -39,8 +40,13 @@ export default function ReportDetailPage() {
             <span className={`status-badge ${getStatusColor(report.status)}`}>
               {getStatusLabel(report.status)}
             </span>
+            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${getCategoryColor(report.customerCategory)}`}>
+              {report.customerCategory}
+            </span>
           </div>
-          <p className="text-sm text-slate-500 mt-1">Case {report.caseId} &middot; {report.applicationType} &middot; Submitted {formatDate(report.submittedAt)}</p>
+          <p className="text-sm text-slate-500 mt-1">
+            FIR {report.firNo} &middot; {report.bankName} &middot; {report.purposeOfLoan} &middot; {report.financeAmount} &middot; Submitted {formatDate(report.submittedAt)}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -84,9 +90,6 @@ export default function ReportDetailPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
               <polyline points="14,2 14,8 20,8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-              <polyline points="10,9 9,9 8,9" />
             </svg>
             Export PDF
           </Link>
@@ -105,73 +108,44 @@ export default function ReportDetailPage() {
                 : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            {tab === 'details' ? 'Details' : tab === 'photos' ? `Photos (${report.photos.length})` : `Audit Trail (${report.auditTrail.length})`}
+            {tab === 'details' ? 'Verification Details' : tab === 'photos' ? `Photos (${report.photos.length})` : `Audit Trail (${report.auditTrail.length})`}
           </button>
         ))}
       </div>
 
-      {/* Details Tab */}
+      {/* Details Tab — All 10 Sections */}
       {activeTab === 'details' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left — Customer & Address Info */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Customer Information */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-              <h3 className="font-display font-bold text-navy-900 mb-4 flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
-                </svg>
-                Customer Information
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <InfoField label="Full Name" value={report.customerName} />
-                <InfoField label="Phone" value={report.customerPhone} />
-                <InfoField label="Email" value={report.customerEmail} />
-                <InfoField label="Application Type" value={report.applicationType} />
-                <InfoField label="Company" value={report.companyName} />
-                <InfoField label="Designation" value={report.designation} />
-                <InfoField label="Employee ID" value={report.employeeId} />
-                <InfoField label="Monthly Income" value={report.monthlyIncome} />
-              </div>
-            </div>
 
-            {/* Address Information */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-              <h3 className="font-display font-bold text-navy-900 mb-4 flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
-                </svg>
-                Address Verification
-              </h3>
+            {/* Section 1: Initial Information */}
+            <FormSection title="Section 1: Initial Information" icon="clipboard">
               <div className="grid grid-cols-2 gap-4">
-                <InfoField label="Address Line 1" value={report.address.line1} />
-                <InfoField label="Area" value={report.address.line2} />
-                <InfoField label="City" value={report.address.city} />
-                <InfoField label="State" value={report.address.state} />
-                <InfoField label="Pincode" value={report.address.pincode} />
+                <InfoField label="FIR Report Given By" value={report.firReportGivenBy} />
+                <InfoField label="FIR Reference Number" value={report.firReferenceNumber} />
+                <InfoField label="Name of Customer" value={report.customerName} />
                 <InfoField
                   label="Address Confirmed"
-                  value={report.addressConfirmed ? 'Yes — Confirmed' : 'No — Not Confirmed'}
+                  value={report.addressConfirmed ? 'YES - CONFIRMED' : 'NO - NOT CONFIRMED'}
                   valueColor={report.addressConfirmed ? 'text-emerald-600' : 'text-red-600'}
                 />
-                <InfoField label="Person Met" value={report.personMet} />
-                <InfoField label="Relation" value={report.relationToApplicant} />
-                <InfoField label="Residence Type" value={report.residenceType} />
-                <InfoField label="Ownership" value={report.residenceOwnership} />
-                <InfoField label="Years at Address" value={report.yearsAtAddress} />
-                <InfoField label="Landmark" value={report.landmark} />
               </div>
-              <div className="mt-4">
-                <InfoField label="Neighbourhood Assessment" value={report.neighbourhood} />
-              </div>
+            </FormSection>
 
-              {/* Map placeholder */}
-              <div className="mt-4 rounded-xl bg-slate-100 h-[200px] flex items-center justify-center border border-slate-200 overflow-hidden relative">
+            {/* Section 2: Location & Residence Details */}
+            <FormSection title="Section 2: Location & Residence Details" icon="map">
+              <div className="grid grid-cols-2 gap-4">
+                <InfoField label="Person Met" value={report.personMet} />
+                <InfoField label="Landmark" value={report.landmark} />
+                <InfoField label="Whether RVR or BVR" value={report.rvrOrBvr} />
+                <InfoField label="Address" value={report.address} />
+                <InfoField label="Location" value={report.location} />
+                <InfoField label="Contact Number" value={report.contactNumber} />
+              </div>
+              {/* GPS Coordinates */}
+              <div className="mt-4 rounded-xl bg-slate-100 h-[160px] flex items-center justify-center border border-slate-200 overflow-hidden relative">
                 <div className="absolute inset-0 opacity-20" style={{
-                  backgroundImage: `
-                    linear-gradient(#94a3b8 1px, transparent 1px),
-                    linear-gradient(90deg, #94a3b8 1px, transparent 1px)
-                  `,
+                  backgroundImage: `linear-gradient(#94a3b8 1px, transparent 1px), linear-gradient(90deg, #94a3b8 1px, transparent 1px)`,
                   backgroundSize: '20px 20px'
                 }} />
                 <div className="relative text-center">
@@ -179,36 +153,146 @@ export default function ReportDetailPage() {
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
                   </svg>
                   <p className="text-xs text-slate-500 font-medium">GPS: {report.coordinates.lat.toFixed(4)}, {report.coordinates.lng.toFixed(4)}</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Map view available with Google Maps integration</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">GPS-tagged location captured during visit</p>
+                </div>
+              </div>
+            </FormSection>
+
+            {/* Section 3: Personal & Residence Information (RVR only) */}
+            {report.rvrOrBvr !== 'BVR' && (
+              <FormSection title="Section 3: Personal & Residence Information" icon="home">
+                <div className="grid grid-cols-2 gap-4">
+                  <InfoField label="Date of Birth / Approx Age" value={report.dobOrAge || 'N/A'} />
+                  <InfoField label="Area of House" value={report.areaOfHouse} />
+                  <InfoField label="Type of House" value={report.typeOfHouse.length > 0 ? report.typeOfHouse.join(', ') : 'N/A'} />
+                  <InfoField label="Area in Sqft" value={report.areaInSqft || 'N/A'} />
+                  <InfoField label="Ownership Details" value={report.ownershipDetails} />
+                </div>
+              </FormSection>
+            )}
+
+            {/* Section 4: Rental & Residence Duration (RVR only) */}
+            {report.rvrOrBvr !== 'BVR' && (
+              <FormSection title="Section 4: Rental & Residence Duration" icon="calendar">
+                <div className="grid grid-cols-2 gap-4">
+                  {report.rentedOwnerName && <InfoField label="Rented Owner Name" value={report.rentedOwnerName} />}
+                  <InfoField label="Staying Years" value={report.stayingYears || 'N/A'} />
+                  <InfoField label="Family Members" value={report.familyMembers || 'N/A'} />
+                  <InfoField label="Earning Members" value={report.earningMembers || 'N/A'} />
+                </div>
+              </FormSection>
+            )}
+
+            {/* Section 5: Spouse Occupation */}
+            {report.rvrOrBvr !== 'BVR' && (
+              <FormSection title="Section 5: Spouse & Occupation Details" icon="users">
+                <div className="grid grid-cols-2 gap-4">
+                  <InfoField label="Spouse Occupation" value={report.spouseOccupation || 'N/A'} />
+                  {report.spouseOccupationDetails && <InfoField label="Spouse Occupation Details" value={report.spouseOccupationDetails} />}
+                  <InfoField label="Customer Category" value={report.customerOccCategory} />
+                </div>
+              </FormSection>
+            )}
+
+            {/* Section 6: If Salaried */}
+            {report.customerOccCategory === 'SALARIED' && (
+              <FormSection title="Section 6: Salaried — Employment Details" icon="briefcase">
+                <div className="grid grid-cols-2 gap-4">
+                  <InfoField label="Company Name" value={report.companyName || 'N/A'} />
+                  <InfoField label="Company Address" value={report.companyAddress || 'N/A'} />
+                  <InfoField label="Designation" value={report.designation || 'N/A'} />
+                  <InfoField label="Years Working" value={report.yearsWorking || 'N/A'} />
+                </div>
+              </FormSection>
+            )}
+
+            {/* Section 7: If Businessman */}
+            {report.customerOccCategory === 'BUSINESSMAN' && (
+              <FormSection title="Section 7: Businessman — Business Details" icon="building">
+                <div className="grid grid-cols-2 gap-4">
+                  <InfoField label="Business Name & Address" value={report.businessNameAddress || 'N/A'} />
+                  <InfoField label="Office Ownership" value={report.officeOwnership || 'N/A'} />
+                  <InfoField label="Nature of Business" value={report.natureOfBusiness || 'N/A'} />
+                  <InfoField label="Years in Business" value={report.yearsInBusiness || 'N/A'} />
+                </div>
+              </FormSection>
+            )}
+
+            {/* Additional Office Verification Fields */}
+            <FormSection title="Office Verification Details" icon="building">
+              <div className="grid grid-cols-2 gap-4">
+                <InfoField label="Office Location / Address" value={report.officeLocation || 'N/A'} />
+                <InfoField label="Office Area (Sqft)" value={report.officeAreaSqft || 'N/A'} />
+                <InfoField
+                  label="Office Setup Seen"
+                  value={report.officeSetupSeen || 'N/A'}
+                  valueColor={report.officeSetupSeen === 'YES' ? 'text-emerald-600' : undefined}
+                />
+                <InfoField label="No. of Employees Seen" value={report.employeesSeen || 'N/A'} />
+              </div>
+            </FormSection>
+
+            {/* Section 8: Company Name Board (BVR) */}
+            {report.rvrOrBvr === 'BVR' && (
+              <FormSection title="Section 8: Business Verification" icon="check">
+                <InfoField label="Company Name Board" value={report.companyNameBoard || 'N/A'} />
+              </FormSection>
+            )}
+
+            {/* Section 9: TPC */}
+            <FormSection title="Section 9: Third Party Confirmation (TPC)" icon="user-check">
+              <InfoField label="TPC / Neighbour Name" value={report.tpcNeighbourName || 'N/A'} />
+            </FormSection>
+
+            {/* Section 10: Remarks */}
+            <FormSection title="Section 10: Special Remarks" icon="message">
+              <div className={`p-4 rounded-lg border ${report.specialRemarks ? 'bg-slate-50 border-slate-200' : 'bg-slate-50 border-slate-100'}`}>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  {report.specialRemarks || 'No special remarks.'}
+                </p>
+              </div>
+            </FormSection>
+
+            {/* Visit Timeline */}
+            <FormSection title="Visit Timeline" icon="clock">
+              <div className="space-y-3">
+                <TimelineItem label="Submitted" time={formatDateTime(report.submittedAt)} by={report.executiveName} color="bg-blue-500" />
+                {report.reviewedAt && (
+                  <TimelineItem label="Reviewed" time={formatDateTime(report.reviewedAt)} by="Admin" color="bg-amber-500" />
+                )}
+                {report.approvedAt && (
+                  <TimelineItem label="Approved" time={formatDateTime(report.approvedAt)} by="Admin" color="bg-emerald-500" />
+                )}
+                {report.status === 'rejected' && report.reviewedAt && (
+                  <TimelineItem label="Rejected" time={formatDateTime(report.reviewedAt)} by="Admin" color="bg-red-500" />
+                )}
+              </div>
+            </FormSection>
+          </div>
+
+          {/* Right Sidebar */}
+          <div className="space-y-6">
+            {/* Case Info Card */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+              <h3 className="font-display font-bold text-navy-900 mb-4 text-sm">Case Information</h3>
+              <div className="space-y-3">
+                <SidebarField label="Bank" value={report.bankName} />
+                <SidebarField label="FIR No" value={report.firNo} />
+                <SidebarField label="Purpose" value={report.purposeOfLoan} />
+                <SidebarField label="Finance Amount" value={report.financeAmount} />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Category</span>
+                  <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${getCategoryColor(report.customerCategory)}`}>
+                    {report.customerCategory}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Type</span>
+                  <span className="text-sm font-bold text-navy-900">{report.rvrOrBvr}</span>
                 </div>
               </div>
             </div>
 
-            {/* Field Visit Details */}
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-              <h3 className="font-display font-bold text-navy-900 mb-4 flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-                </svg>
-                Visit Timeline
-              </h3>
-              <div className="space-y-3">
-                <TimelineItem label="Submitted" time={formatDateTime(report.submittedAt)} by={report.executiveName} color="bg-blue-500" />
-                {report.reviewedAt && (
-                  <TimelineItem label="Reviewed" time={formatDateTime(report.reviewedAt)} by="Admin User" color="bg-amber-500" />
-                )}
-                {report.approvedAt && (
-                  <TimelineItem label="Approved" time={formatDateTime(report.approvedAt)} by="Admin User" color="bg-emerald-500" />
-                )}
-                {report.status === 'rejected' && report.reviewedAt && (
-                  <TimelineItem label="Rejected" time={formatDateTime(report.reviewedAt)} by="Admin User" color="bg-red-500" />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Right — Sidebar */}
-          <div className="space-y-6">
             {/* Executive Card */}
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
               <h3 className="font-display font-bold text-navy-900 mb-4 text-sm">Field Executive</h3>
@@ -264,6 +348,10 @@ export default function ReportDetailPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Verification Type</span>
+                  <span className="text-sm font-bold text-navy-900">{report.rvrOrBvr}</span>
+                </div>
+                <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500">Audit Entries</span>
                   <span className="text-sm font-bold text-navy-900">{report.auditTrail.length}</span>
                 </div>
@@ -293,7 +381,6 @@ export default function ReportDetailPage() {
                   </svg>
                   <p className="text-xs text-slate-400">{photo.label}</p>
                 </div>
-                {/* GPS badge */}
                 <div className="absolute top-2 right-2 bg-navy-900/80 backdrop-blur-sm text-white text-[9px] px-2 py-1 rounded-lg flex items-center gap-1">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
@@ -319,11 +406,9 @@ export default function ReportDetailPage() {
           <div className="space-y-0">
             {report.auditTrail.map((entry, i) => (
               <div key={entry.id} className="flex gap-4 relative">
-                {/* Timeline line */}
                 {i < report.auditTrail.length - 1 && (
                   <div className="absolute left-[11px] top-[28px] w-[2px] h-[calc(100%-8px)] bg-slate-200" />
                 )}
-                {/* Dot */}
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
                   entry.action.includes('Submitted') ? 'bg-blue-100 text-blue-600' :
                   entry.action.includes('Approved') || entry.newValue === 'approved' ? 'bg-emerald-100 text-emerald-600' :
@@ -335,7 +420,6 @@ export default function ReportDetailPage() {
                     <circle cx="12" cy="12" r="5" />
                   </svg>
                 </div>
-                {/* Content */}
                 <div className="pb-6 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-navy-900">{entry.action}</p>
@@ -361,11 +445,46 @@ export default function ReportDetailPage() {
   );
 }
 
+function FormSection({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+  const iconSvg = {
+    clipboard: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /></svg>,
+    map: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>,
+    home: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9,22 9,12 15,12 15,22" /></svg>,
+    calendar: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>,
+    users: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>,
+    briefcase: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" /></svg>,
+    building: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" /><line x1="9" y1="6" x2="9" y2="6.01" /><line x1="15" y1="6" x2="15" y2="6.01" /><line x1="9" y1="10" x2="9" y2="10.01" /><line x1="15" y1="10" x2="15" y2="10.01" /><line x1="9" y1="14" x2="9" y2="14.01" /><line x1="15" y1="14" x2="15" y2="14.01" /><line x1="9" y1="18" x2="15" y2="18" /></svg>,
+    check: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20,6 9,17 4,12" /></svg>,
+    'user-check': <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="8.5" cy="7" r="4" /><polyline points="17,11 19,13 23,9" /></svg>,
+    message: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>,
+    clock: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0d9488" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" /></svg>,
+  }[icon] || null;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
+      <h3 className="font-display font-bold text-navy-900 mb-4 flex items-center gap-2">
+        {iconSvg}
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
 function InfoField({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
   return (
     <div>
       <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-0.5">{label}</p>
       <p className={`text-sm font-medium ${valueColor || 'text-navy-900'}`}>{value}</p>
+    </div>
+  );
+}
+
+function SidebarField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-slate-500">{label}</span>
+      <span className="text-sm font-medium text-navy-900">{value}</span>
     </div>
   );
 }

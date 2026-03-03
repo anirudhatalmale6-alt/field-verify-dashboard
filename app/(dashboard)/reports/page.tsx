@@ -2,17 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { reports, getStatusColor, getStatusLabel, formatDate, formatTime } from '@/lib/mock-data';
+import { reports, getStatusColor, getStatusLabel, getCategoryColor, formatDate, formatTime } from '@/lib/mock-data';
 
 export default function ReportsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
-
-  const applicationTypes = useMemo(() => {
-    const types = Array.from(new Set(reports.map(r => r.applicationType)));
-    return types.sort();
-  }, []);
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   const filtered = useMemo(() => {
     return reports.filter(r => {
@@ -20,12 +15,14 @@ export default function ReportsPage() {
         r.customerName.toLowerCase().includes(search.toLowerCase()) ||
         r.caseId.toLowerCase().includes(search.toLowerCase()) ||
         r.executiveName.toLowerCase().includes(search.toLowerCase()) ||
-        r.address.city.toLowerCase().includes(search.toLowerCase());
+        r.location.toLowerCase().includes(search.toLowerCase()) ||
+        r.bankName.toLowerCase().includes(search.toLowerCase()) ||
+        r.firNo.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === 'all' || r.status === statusFilter;
-      const matchType = typeFilter === 'all' || r.applicationType === typeFilter;
-      return matchSearch && matchStatus && matchType;
+      const matchCategory = categoryFilter === 'all' || r.customerCategory === categoryFilter;
+      return matchSearch && matchStatus && matchCategory;
     });
-  }, [search, statusFilter, typeFilter]);
+  }, [search, statusFilter, categoryFilter]);
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = { all: reports.length };
@@ -80,21 +77,21 @@ export default function ReportsPage() {
           </svg>
           <input
             type="text"
-            placeholder="Search by name, case ID, executive, or city..."
+            placeholder="Search by customer, FIR no, bank, location, executive..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           />
         </div>
         <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
           className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-700"
         >
-          <option value="all">All Types</option>
-          {applicationTypes.map(t => (
-            <option key={t} value={t}>{t}</option>
-          ))}
+          <option value="all">All Categories</option>
+          <option value="HOME">HOME (RVR)</option>
+          <option value="OFFICE">OFFICE (BVR)</option>
+          <option value="OTHER">OTHER</option>
         </select>
       </div>
 
@@ -104,44 +101,51 @@ export default function ReportsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100">
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-6 py-3">Case ID</th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-6 py-3">Customer</th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-6 py-3">Address</th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-6 py-3">Type</th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-6 py-3">Executive</th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-6 py-3">Submitted</th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-6 py-3">Photos</th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-6 py-3">Status</th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-6 py-3">Actions</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">FIR No</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Bank</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Customer</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Purpose</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Category</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Location</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Executive</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Submitted</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Photos</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Status</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((report) => (
                 <tr key={report.id} className="report-row border-b border-slate-50 last:border-0">
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-mono font-semibold text-navy-900">{report.caseId}</span>
-                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">{report.id}</p>
+                  <td className="px-4 py-3">
+                    <span className="text-sm font-mono font-semibold text-navy-900">{report.firNo}</span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
+                    <span className="text-sm text-slate-700">{report.bankName}</span>
+                  </td>
+                  <td className="px-4 py-3">
                     <p className="text-sm font-medium text-navy-900">{report.customerName}</p>
-                    <p className="text-[11px] text-slate-400">{report.customerPhone}</p>
+                    <p className="text-[10px] text-slate-400">{report.contactNumber}</p>
                   </td>
-                  <td className="px-6 py-4 max-w-[200px]">
-                    <p className="text-xs text-slate-600 truncate">{report.address.line1}</p>
-                    <p className="text-[10px] text-slate-400">{report.address.city}, {report.address.pincode}</p>
+                  <td className="px-4 py-3">
+                    <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md whitespace-nowrap">{report.purposeOfLoan}</span>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md whitespace-nowrap">{report.applicationType}</span>
+                  <td className="px-4 py-3">
+                    <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border status-badge ${getCategoryColor(report.customerCategory)}`}>
+                      {report.customerCategory}
+                    </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <p className="text-sm text-slate-700">{report.executiveName}</p>
-                    <p className="text-[10px] text-slate-400">{report.executiveId}</p>
+                  <td className="px-4 py-3">
+                    <span className="text-xs text-slate-600">{report.location}</span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
+                    <p className="text-sm text-teal-700 font-medium">{report.executiveName}</p>
+                  </td>
+                  <td className="px-4 py-3">
                     <p className="text-sm text-slate-600">{formatDate(report.submittedAt)}</p>
                     <p className="text-[10px] text-slate-400">{formatTime(report.submittedAt)}</p>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21,15 16,10 5,21" />
@@ -149,12 +153,12 @@ export default function ReportsPage() {
                       <span className="text-xs text-slate-500">{report.photos.length}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <span className={`status-badge ${getStatusColor(report.status)}`}>
                       {getStatusLabel(report.status)}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <Link
                       href={`/reports/${report.id}`}
                       className="inline-flex items-center gap-1 text-xs font-medium text-teal-600 hover:text-teal-700 bg-teal-50 hover:bg-teal-100 px-2.5 py-1.5 rounded-lg transition-colors"
@@ -177,7 +181,7 @@ export default function ReportsPage() {
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
             <p className="text-sm text-slate-500">No reports match your filters</p>
-            <button onClick={() => { setSearch(''); setStatusFilter('all'); setTypeFilter('all'); }} className="text-xs text-teal-600 mt-1 hover:underline">
+            <button onClick={() => { setSearch(''); setStatusFilter('all'); setCategoryFilter('all'); }} className="text-xs text-teal-600 mt-1 hover:underline">
               Clear all filters
             </button>
           </div>

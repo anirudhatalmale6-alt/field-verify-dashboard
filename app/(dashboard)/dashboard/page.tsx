@@ -168,10 +168,10 @@ export default function DashboardPage() {
                   </td>
                   <td className="px-6 py-3.5">
                     <p className="text-sm font-medium text-navy-900">{report.customerName}</p>
-                    <p className="text-[11px] text-slate-400">{report.address.city}</p>
+                    <p className="text-[11px] text-slate-400">{report.location}</p>
                   </td>
                   <td className="px-6 py-3.5">
-                    <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">{report.applicationType}</span>
+                    <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">{report.purposeOfLoan}</span>
                   </td>
                   <td className="px-6 py-3.5">
                     <p className="text-sm text-slate-700">{report.executiveName}</p>

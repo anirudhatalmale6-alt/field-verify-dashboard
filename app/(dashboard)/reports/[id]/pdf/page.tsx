@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { reports, getStatusLabel, formatDateTime } from '@/lib/mock-data';
+import { reports, getStatusLabel, getCategoryColor, formatDateTime } from '@/lib/mock-data';
 
 export default function PDFPreviewPage() {
   const params = useParams();
@@ -29,7 +29,7 @@ export default function PDFPreviewPage() {
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <Link href="/reports" className="hover:text-teal-600 transition-colors">Reports</Link>
           <span>/</span>
-          <Link href={`/reports/${report.id}`} className="hover:text-teal-600 transition-colors">{report.caseId}</Link>
+          <Link href={`/reports/${report.id}`} className="hover:text-teal-600 transition-colors">{report.firNo}</Link>
           <span>/</span>
           <span className="text-navy-900 font-medium">PDF Export</span>
         </div>
@@ -66,12 +66,12 @@ export default function PDFPreviewPage() {
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-xl font-display font-bold">FieldVerify Pro</h1>
-                  <p className="text-[10px] text-teal-400 tracking-widest uppercase">Address Verification Report</p>
+                  <h1 className="text-xl font-display font-bold">Koteshwari Onfield Services</h1>
+                  <p className="text-[10px] text-teal-400 tracking-widest uppercase">Field Investigation Report</p>
                 </div>
               </div>
               <h2 className="text-2xl font-display font-bold mt-2">{report.customerName}</h2>
-              <p className="text-sm text-slate-300 mt-1">Case {report.caseId} &middot; {report.applicationType}</p>
+              <p className="text-sm text-slate-300 mt-1">FIR {report.firNo} &middot; {report.bankName} &middot; {report.purposeOfLoan}</p>
             </div>
             <div className="text-right">
               <div className={`inline-block px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider ${
@@ -90,44 +90,160 @@ export default function PDFPreviewPage() {
 
         {/* Body */}
         <div className="p-8">
-          {/* Customer Section */}
+          {/* Case Information */}
           <section className="mb-8">
-            <SectionTitle title="Customer Information" />
+            <SectionTitle title="Case Information" />
             <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
-              <PDFField label="Full Name" value={report.customerName} />
-              <PDFField label="Phone" value={report.customerPhone} />
-              <PDFField label="Email" value={report.customerEmail} />
-              <PDFField label="Application Type" value={report.applicationType} />
-              <PDFField label="Company / Employer" value={report.companyName} />
-              <PDFField label="Designation" value={report.designation} />
-              <PDFField label="Employee ID" value={report.employeeId} />
-              <PDFField label="Monthly Income" value={report.monthlyIncome} />
+              <PDFField label="Bank Name" value={report.bankName} />
+              <PDFField label="FIR No" value={report.firNo} />
+              <PDFField label="Applicant" value={report.applicant} />
+              <PDFField label="Purpose of Loan" value={report.purposeOfLoan} />
+              <PDFField label="Finance Amount" value={report.financeAmount} />
+              <div>
+                <p className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Customer Category</p>
+                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border inline-block mt-0.5 ${getCategoryColor(report.customerCategory)}`}>
+                  {report.customerCategory}
+                </span>
+              </div>
             </div>
           </section>
 
-          {/* Address Section */}
+          {/* Section 1: Initial Information */}
           <section className="mb-8">
-            <SectionTitle title="Address Verification" />
+            <SectionTitle title="Section 1: Initial Information" />
             <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
-              <PDFField label="Address" value={`${report.address.line1}, ${report.address.line2}`} />
-              <PDFField label="City / State" value={`${report.address.city}, ${report.address.state} — ${report.address.pincode}`} />
-              <PDFField label="GPS Coordinates" value={`${report.coordinates.lat.toFixed(6)}, ${report.coordinates.lng.toFixed(6)}`} />
-              <PDFField label="Landmark" value={report.landmark} />
+              <PDFField label="FIR Report Given By" value={report.firReportGivenBy} />
+              <PDFField label="FIR Reference Number" value={report.firReferenceNumber} />
+              <PDFField label="Name of Customer" value={report.customerName} />
               <PDFField
                 label="Address Confirmed"
                 value={report.addressConfirmed ? 'YES — CONFIRMED' : 'NO — NOT CONFIRMED'}
                 highlight={report.addressConfirmed ? 'green' : 'red'}
               />
-              <PDFField label="Residence Type" value={`${report.residenceType} (${report.residenceOwnership})`} />
-              <PDFField label="Years at Address" value={report.yearsAtAddress} />
-              <PDFField label="Person Met" value={`${report.personMet} (${report.relationToApplicant})`} />
-            </div>
-            <div className="mt-3">
-              <PDFField label="Neighbourhood Assessment" value={report.neighbourhood} />
             </div>
           </section>
 
-          {/* Photos Section */}
+          {/* Section 2: Location & Residence */}
+          <section className="mb-8">
+            <SectionTitle title="Section 2: Location & Residence Details" />
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+              <PDFField label="Person Met" value={report.personMet} />
+              <PDFField label="Landmark" value={report.landmark} />
+              <PDFField label="Whether RVR or BVR" value={report.rvrOrBvr} />
+              <PDFField label="Address" value={report.address} />
+              <PDFField label="Location" value={report.location} />
+              <PDFField label="Contact Number" value={report.contactNumber} />
+              <PDFField label="GPS Coordinates" value={`${report.coordinates.lat.toFixed(6)}, ${report.coordinates.lng.toFixed(6)}`} />
+            </div>
+          </section>
+
+          {/* Section 3: Personal & Residence (RVR) */}
+          {report.rvrOrBvr !== 'BVR' && (
+            <section className="mb-8">
+              <SectionTitle title="Section 3: Personal & Residence Information" />
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+                <PDFField label="Date of Birth / Age" value={report.dobOrAge || 'N/A'} />
+                <PDFField label="Area of House" value={report.areaOfHouse} />
+                <PDFField label="Type of House" value={report.typeOfHouse.length > 0 ? report.typeOfHouse.join(', ') : 'N/A'} />
+                <PDFField label="Area in Sqft" value={report.areaInSqft || 'N/A'} />
+                <PDFField label="Ownership Details" value={report.ownershipDetails} />
+              </div>
+            </section>
+          )}
+
+          {/* Section 4: Rental & Duration (RVR) */}
+          {report.rvrOrBvr !== 'BVR' && (
+            <section className="mb-8">
+              <SectionTitle title="Section 4: Rental & Residence Duration" />
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+                {report.rentedOwnerName && <PDFField label="Rented Owner Name" value={report.rentedOwnerName} />}
+                <PDFField label="Staying Years" value={report.stayingYears || 'N/A'} />
+                <PDFField label="Family Members" value={report.familyMembers || 'N/A'} />
+                <PDFField label="Earning Members" value={report.earningMembers || 'N/A'} />
+              </div>
+            </section>
+          )}
+
+          {/* Section 5: Spouse & Occupation */}
+          {report.rvrOrBvr !== 'BVR' && (
+            <section className="mb-8">
+              <SectionTitle title="Section 5: Spouse & Occupation Details" />
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+                <PDFField label="Spouse Occupation" value={report.spouseOccupation || 'N/A'} />
+                {report.spouseOccupationDetails && <PDFField label="Spouse Details" value={report.spouseOccupationDetails} />}
+                <PDFField label="Customer Category" value={report.customerOccCategory} />
+              </div>
+            </section>
+          )}
+
+          {/* Section 6: Salaried */}
+          {report.customerOccCategory === 'SALARIED' && (
+            <section className="mb-8">
+              <SectionTitle title="Section 6: Employment Details (Salaried)" />
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+                <PDFField label="Company Name" value={report.companyName || 'N/A'} />
+                <PDFField label="Company Address" value={report.companyAddress || 'N/A'} />
+                <PDFField label="Designation" value={report.designation || 'N/A'} />
+                <PDFField label="Years Working" value={report.yearsWorking || 'N/A'} />
+              </div>
+            </section>
+          )}
+
+          {/* Section 7: Businessman */}
+          {report.customerOccCategory === 'BUSINESSMAN' && (
+            <section className="mb-8">
+              <SectionTitle title="Section 7: Business Details (Businessman)" />
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+                <PDFField label="Business Name & Address" value={report.businessNameAddress || 'N/A'} />
+                <PDFField label="Office Ownership" value={report.officeOwnership || 'N/A'} />
+                <PDFField label="Nature of Business" value={report.natureOfBusiness || 'N/A'} />
+                <PDFField label="Years in Business" value={report.yearsInBusiness || 'N/A'} />
+              </div>
+            </section>
+          )}
+
+          {/* Office Verification */}
+          <section className="mb-8">
+            <SectionTitle title="Office Verification" />
+            <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+              <PDFField label="Office Location" value={report.officeLocation || 'N/A'} />
+              <PDFField label="Office Area (Sqft)" value={report.officeAreaSqft || 'N/A'} />
+              <PDFField
+                label="Office Setup Seen"
+                value={report.officeSetupSeen || 'N/A'}
+                highlight={report.officeSetupSeen === 'YES' ? 'green' : undefined}
+              />
+              <PDFField label="Employees Seen" value={report.employeesSeen || 'N/A'} />
+            </div>
+          </section>
+
+          {/* Section 8: BVR Company Board */}
+          {report.rvrOrBvr === 'BVR' && (
+            <section className="mb-8">
+              <SectionTitle title="Section 8: Business Verification (Name Board)" />
+              <div className="mt-3">
+                <PDFField label="Company Name Board" value={report.companyNameBoard || 'N/A'} />
+              </div>
+            </section>
+          )}
+
+          {/* Section 9: TPC */}
+          <section className="mb-8">
+            <SectionTitle title="Section 9: Third Party Confirmation (TPC)" />
+            <div className="mt-3">
+              <PDFField label="TPC / Neighbour Name" value={report.tpcNeighbourName || 'N/A'} />
+            </div>
+          </section>
+
+          {/* Section 10: Remarks */}
+          <section className="mb-8">
+            <SectionTitle title="Section 10: Special Remarks" />
+            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mt-3">
+              <p className="text-sm text-slate-700 leading-relaxed">{report.specialRemarks || 'No special remarks.'}</p>
+            </div>
+          </section>
+
+          {/* Photos */}
           <section className="mb-8">
             <SectionTitle title={`Field Photos (${report.photos.length})`} />
             <div className="grid grid-cols-3 gap-3 mt-3">
@@ -146,7 +262,7 @@ export default function PDFPreviewPage() {
             </div>
           </section>
 
-          {/* Field Visit Info */}
+          {/* Visit Details */}
           <section className="mb-8">
             <SectionTitle title="Visit Details" />
             <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
@@ -199,8 +315,8 @@ export default function PDFPreviewPage() {
           <div className="border-t border-slate-200 pt-6 mt-8">
             <div className="flex items-center justify-between text-[10px] text-slate-400">
               <div>
-                <p className="font-semibold text-navy-900">FieldVerify Pro</p>
-                <p>Address Verification Report — {report.caseId}</p>
+                <p className="font-semibold text-navy-900">Koteshwari Onfield Services Pvt. Ltd.</p>
+                <p>Field Investigation Report — FIR {report.firNo}</p>
               </div>
               <div className="text-right">
                 <p>Confidential — For authorized use only</p>

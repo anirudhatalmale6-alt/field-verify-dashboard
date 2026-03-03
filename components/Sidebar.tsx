@@ -5,7 +5,9 @@ import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
-  { href: '/reports', label: 'Reports', icon: ReportsIcon },
+  { href: '/cases', label: 'Cases', icon: CasesIcon, badge: '2' },
+  { href: '/upload', label: 'Upload Excel', icon: UploadIcon },
+  { href: '/reports', label: 'Reports', icon: ReportsIcon, badge: '2' },
   { href: '/executives', label: 'Executives', icon: ExecutivesIcon },
   { href: '/audit', label: 'Audit Trail', icon: AuditIcon },
 ];
@@ -43,6 +45,27 @@ function ExecutivesIcon() {
   );
 }
 
+function CasesIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="16" height="14" rx="2" />
+      <line x1="2" y1="7" x2="18" y2="7" />
+      <line x1="6" y1="3" x2="6" y2="7" />
+      <line x1="14" y1="3" x2="14" y2="7" />
+    </svg>
+  );
+}
+
+function UploadIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2z" />
+      <polyline points="10,8 10,14" />
+      <polyline points="7,11 10,8 13,11" />
+    </svg>
+  );
+}
+
 function AuditIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -67,8 +90,8 @@ export default function Sidebar() {
             </svg>
           </div>
           <div>
-            <h1 className="font-display font-bold text-sm tracking-tight">FieldVerify</h1>
-            <p className="text-[10px] text-slate-400 tracking-wider uppercase">Pro Dashboard</p>
+            <h1 className="font-display font-bold text-sm tracking-tight">Koteshwari</h1>
+            <p className="text-[10px] text-slate-400 tracking-wider uppercase">Onfield Services</p>
           </div>
         </div>
       </div>
@@ -91,8 +114,8 @@ export default function Sidebar() {
                 >
                   <item.icon />
                   {item.label}
-                  {item.label === 'Reports' && (
-                    <span className="ml-auto bg-amber-500 text-navy-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full">3</span>
+                  {'badge' in item && item.badge && (
+                    <span className="ml-auto bg-amber-500 text-navy-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{item.badge}</span>
                   )}
                 </Link>
               </li>
