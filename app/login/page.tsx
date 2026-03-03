@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { login } from '@/lib/api-client';
+import { safeSetItem } from '@/lib/storage';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function LoginPage() {
     try {
       const data = await login(email, password);
       // Store user info in localStorage for client access
-      localStorage.setItem('user', JSON.stringify(data.user));
+      safeSetItem('user', JSON.stringify(data.user));
       // Redirect based on role
       if (data.user.role === 'executive') {
         router.push('/exec/cases');

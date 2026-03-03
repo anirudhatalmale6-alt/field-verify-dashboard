@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { logout, getCases } from '@/lib/api-client';
+import { safeGetItem, safeRemoveItem } from '@/lib/storage';
 
 interface UserInfo {
   id: string;
@@ -22,7 +23,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('user');
+      const stored = safeGetItem('user');
       if (stored) setUser(JSON.parse(stored));
     } catch {}
 
@@ -46,7 +47,7 @@ export default function ProfilePage() {
     try {
       await logout();
     } catch {}
-    localStorage.removeItem('user');
+    safeRemoveItem('user');
     router.push('/login');
   };
 

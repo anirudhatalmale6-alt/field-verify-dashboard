@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { safeGetItem } from '@/lib/storage';
 
 export default function ExecutiveLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('user');
+      const stored = safeGetItem('user');
       if (!stored) {
         router.push('/login');
         return;

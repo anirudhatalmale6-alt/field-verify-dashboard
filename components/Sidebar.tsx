@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { logout } from '@/lib/api-client';
+import { safeGetItem, safeRemoveItem } from '@/lib/storage';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
@@ -84,7 +85,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('user');
+      const stored = safeGetItem('user');
       if (stored) setUser(JSON.parse(stored));
     } catch {}
   }, []);
@@ -93,7 +94,7 @@ export default function Sidebar() {
     try {
       await logout();
     } catch {}
-    localStorage.removeItem('user');
+    safeRemoveItem('user');
     router.push('/login');
   };
 
