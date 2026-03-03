@@ -43,9 +43,9 @@ export async function GET(request: NextRequest) {
       params.push(user.id);
     }
     if (search) {
-      query += ` AND (c.customer_name LIKE ? OR c.fir_no LIKE ? OR c.bank_name LIKE ? OR c.location LIKE ? OR c.applicant LIKE ?)`;
+      query += ` AND (c.id LIKE ? OR c.customer_name LIKE ? OR c.fir_no LIKE ? OR c.bank_name LIKE ? OR c.location LIKE ? OR c.applicant LIKE ?)`;
       const s = `%${search}%`;
-      params.push(s, s, s, s, s);
+      params.push(s, s, s, s, s, s);
     }
 
     query += ` ORDER BY c.imported_at DESC`;
