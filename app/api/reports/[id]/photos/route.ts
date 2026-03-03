@@ -31,8 +31,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'No photos uploaded' }, { status: 400 });
     }
 
-    // Ensure upload directory exists
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', id);
+    // Ensure upload directory exists (data/ persists in production unlike public/)
+    const uploadDir = path.join(process.cwd(), 'data', 'uploads', id);
     await mkdir(uploadDir, { recursive: true });
 
     const insertPhoto = db.prepare(`
@@ -84,7 +84,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const { id } = await params;
     const db = getDb();
 
-    const photos = db.prepare('SELECT * FROM photos WHERE report_id = ? ORDER BY captured_at ASC').all(id);
+    const rawPhotos = db.prepare('SELECT * FROM photos WHERE report_id = ? ORDER BY captured_at ASC').all(id) as { id: string; report_id: string; filename: string; [key: string]: unknown }[];
+    const photos = rawPhotos.map(p => ({
+      ...p,
+      file_path: `/api/photos/${p.id}`,
+    }));
 
     return NextResponse.json({ photos });
   } catch (error) {

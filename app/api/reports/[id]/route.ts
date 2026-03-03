@@ -27,8 +27,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
     }
 
-    // Get photos
-    const photos = db.prepare('SELECT * FROM photos WHERE report_id = ? ORDER BY captured_at ASC').all(id);
+    // Get photos with serving URLs
+    const rawPhotos = db.prepare('SELECT * FROM photos WHERE report_id = ? ORDER BY captured_at ASC').all(id) as { id: string; report_id: string; filename: string; [key: string]: unknown }[];
+    const photos = rawPhotos.map(p => ({
+      ...p,
+      file_path: `/api/photos/${p.id}`,
+    }));
 
     // Get audit trail
     const auditTrail = db.prepare('SELECT * FROM audit_trail WHERE report_id = ? ORDER BY performed_at ASC').all(id);
