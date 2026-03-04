@@ -165,10 +165,10 @@ export default function LoginPage() {
             <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Login Credentials</p>
             <div className="space-y-1">
               <p className="text-xs text-slate-600">
-                <span className="font-medium">Admin:</span> admin@koteshwari.com / admin123
+                <span className="font-medium">Admin:</span> admin@koteshwari.com / Kospl@2026
               </p>
               <p className="text-xs text-slate-600">
-                <span className="font-medium">Executive:</span> avinash@koteshwari.com / exec123
+                <span className="font-medium">Executive:</span> avinash@koteshwari.com / Field@2026
               </p>
             </div>
           </div>

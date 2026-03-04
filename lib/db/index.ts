@@ -187,14 +187,14 @@ function initializeSchema(db: Database.Database) {
 }
 
 function seedDefaultData(db: Database.Database) {
-  const adminHash = bcrypt.hashSync('admin123', 10);
+  const adminHash = bcrypt.hashSync('Kospl@2026', 10);
 
   // Admin user
   db.prepare(`INSERT INTO users (id, name, email, phone, password_hash, role, avatar, region) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
     .run('ADM001', 'Admin', 'admin@koteshwari.com', '+91 98765 00000', adminHash, 'admin', 'AD', 'Head Office');
 
   // Executives (from the real form)
-  const execHash = bcrypt.hashSync('exec123', 10);
+  const execHash = bcrypt.hashSync('Field@2026', 10);
   const executives = [
     ['FE001', 'AVINASH GARJE', 'avinash@koteshwari.com', '+91 98765 00001', 'AG', 'Mumbai Central'],
     ['FE002', 'CHETAN NEWALE', 'chetan@koteshwari.com', '+91 98765 00002', 'CN', 'Mumbai West'],
