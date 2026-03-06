@@ -212,6 +212,13 @@ function initializeSchema(db: Database.Database) {
     db.exec("ALTER TABLE users ADD COLUMN last_location_at TEXT");
   }
 
+  // Migration: add lat/lng to cases for location-based sorting
+  const caseCols = db.prepare("PRAGMA table_info(cases)").all() as { name: string }[];
+  if (!caseCols.find(c => c.name === 'latitude')) {
+    db.exec("ALTER TABLE cases ADD COLUMN latitude REAL");
+    db.exec("ALTER TABLE cases ADD COLUMN longitude REAL");
+  }
+
   // Seed default admin if no users exist
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {

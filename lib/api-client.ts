@@ -47,11 +47,13 @@ export async function getDashboard() {
 }
 
 // Cases
-export async function getCases(params?: { status?: string; category?: string; search?: string }) {
+export async function getCases(params?: { status?: string; category?: string; search?: string; lat?: number; lng?: number }) {
   const sp = new URLSearchParams();
   if (params?.status) sp.set('status', params.status);
   if (params?.category) sp.set('category', params.category);
   if (params?.search) sp.set('search', params.search);
+  if (params?.lat !== undefined) sp.set('lat', params.lat.toString());
+  if (params?.lng !== undefined) sp.set('lng', params.lng.toString());
   return fetchAPI(`/api/cases?${sp.toString()}`);
 }
 

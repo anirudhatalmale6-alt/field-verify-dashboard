@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { getCases } from '@/lib/api-client';
 import { getStatusColor, getStatusLabel } from '@/lib/utils';
@@ -19,6 +19,7 @@ interface CaseRow {
   finance_amount: string;
   status: string;
   imported_at: string;
+  distance?: number;
 }
 
 export default function ExecCasesPage() {
@@ -26,6 +27,9 @@ export default function ExecCasesPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('assigned');
   const [search, setSearch] = useState('');
+  const [userLat, setUserLat] = useState<number | null>(null);
+  const [userLng, setUserLng] = useState<number | null>(null);
+  const geocodeTriggered = useRef(false);
 
   // Push-back modal state
   const [pushbackCaseId, setPushbackCaseId] = useState<string | null>(null);
@@ -33,22 +37,60 @@ export default function ExecCasesPage() {
   const [pushbackSubmitting, setPushbackSubmitting] = useState(false);
   const [pushbackError, setPushbackError] = useState('');
 
+  // Get user's current location
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLat(pos.coords.latitude);
+          setUserLng(pos.coords.longitude);
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
+    }
+  }, []);
+
+  // Trigger background geocoding of cases (runs once)
+  useEffect(() => {
+    if (geocodeTriggered.current) return;
+    geocodeTriggered.current = true;
+
+    const triggerGeocode = async () => {
+      try {
+        // Fire and forget — geocode up to 5 cases per call, repeat 3 times
+        for (let i = 0; i < 3; i++) {
+          const res = await fetch('/api/geocode', { method: 'POST', credentials: 'include' });
+          const data = await res.json();
+          if (data.remaining === 0) break;
+          // Small delay between batches
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      } catch {}
+    };
+    triggerGeocode();
+  }, []);
+
   const fetchCases = useCallback(async () => {
     setLoading(true);
     try {
+      const locParams = userLat !== null && userLng !== null ? { lat: userLat, lng: userLng } : {};
       let data;
       if (filter === 'assigned') {
         const [assignedData, inProgressData] = await Promise.all([
-          getCases({ status: 'assigned' }),
-          getCases({ status: 'in_progress' }),
+          getCases({ status: 'assigned', ...locParams }),
+          getCases({ status: 'in_progress', ...locParams }),
         ]);
-        data = {
-          cases: [...(assignedData.cases || []), ...(inProgressData.cases || [])],
-        };
+        // Merge and sort by distance
+        const merged = [...(assignedData.cases || []), ...(inProgressData.cases || [])];
+        if (userLat !== null) {
+          merged.sort((a: CaseRow, b: CaseRow) => (a.distance || 999999) - (b.distance || 999999));
+        }
+        data = { cases: merged };
       } else if (filter === 'all') {
-        data = await getCases();
+        data = await getCases(locParams);
       } else {
-        data = await getCases({ status: filter });
+        data = await getCases({ status: filter, ...locParams });
       }
       setCases(data.cases || []);
     } catch (err) {
@@ -56,7 +98,7 @@ export default function ExecCasesPage() {
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, userLat, userLng]);
 
   useEffect(() => {
     fetchCases();
@@ -102,7 +144,7 @@ export default function ExecCasesPage() {
     setPushbackError('');
   };
 
-  // Open Google Maps directions from current location to the case address
+  // Open Google Maps directions
   const openMaps = (e: React.MouseEvent, address: string, location: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -127,6 +169,16 @@ export default function ExecCasesPage() {
           <p className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Submitted</p>
         </div>
       </div>
+
+      {/* Location sorting indicator */}
+      {userLat !== null && (
+        <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5 mb-3 flex items-center gap-2">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+          </svg>
+          <p className="text-[10px] text-blue-700 font-medium">Sorted by nearest location</p>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
@@ -219,15 +271,22 @@ export default function ExecCasesPage() {
                   }`} />
 
                   <div className="p-4">
-                    {/* Top Row: Name + Status */}
+                    {/* Top Row: Name + Status + Distance */}
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1 min-w-0">
                         <h3 className="text-base font-bold text-navy-900 truncate">{c.customer_name}</h3>
                         <p className="text-xs text-slate-500">{c.applicant}</p>
                       </div>
-                      <span className={`text-[9px] font-bold uppercase px-2 py-1 rounded-full border ml-2 flex-shrink-0 ${getStatusColor(c.status)}`}>
-                        {getStatusLabel(c.status)}
-                      </span>
+                      <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
+                        {c.distance !== undefined && c.distance < 999999 && (
+                          <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">
+                            {c.distance < 1 ? `${Math.round(c.distance * 1000)}m` : `${c.distance.toFixed(1)} km`}
+                          </span>
+                        )}
+                        <span className={`text-[9px] font-bold uppercase px-2 py-1 rounded-full border ${getStatusColor(c.status)}`}>
+                          {getStatusLabel(c.status)}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Address */}

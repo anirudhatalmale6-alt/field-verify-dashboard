@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const executiveId = searchParams.get('executive_id');
+    const userLat = searchParams.get('lat') ? parseFloat(searchParams.get('lat')!) : null;
+    const userLng = searchParams.get('lng') ? parseFloat(searchParams.get('lng')!) : null;
 
     const db = getDb();
 
@@ -63,7 +65,26 @@ export async function GET(request: NextRequest) {
 
     query += ` ORDER BY c.imported_at DESC`;
 
-    const cases = db.prepare(query).all(...params);
+    let cases = db.prepare(query).all(...params) as Record<string, unknown>[];
+
+    // Sort by distance if user coordinates provided
+    if (userLat !== null && userLng !== null) {
+      cases = cases.map(c => {
+        const cLat = c.latitude as number | null;
+        const cLng = c.longitude as number | null;
+        let distance = 999999;
+        if (cLat && cLng && cLat !== 0 && cLng !== 0) {
+          // Haversine formula
+          const R = 6371;
+          const dLat = ((cLat - userLat) * Math.PI) / 180;
+          const dLon = ((cLng - userLng) * Math.PI) / 180;
+          const a = Math.sin(dLat / 2) ** 2 + Math.cos((userLat * Math.PI) / 180) * Math.cos((cLat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+          distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+        return { ...c, distance: Math.round(distance * 10) / 10 };
+      });
+      cases.sort((a, b) => (a.distance as number) - (b.distance as number));
+    }
 
     // Status counts
     const counts = db.prepare(`
