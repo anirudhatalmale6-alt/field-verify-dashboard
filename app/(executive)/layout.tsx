@@ -9,7 +9,9 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<{ name: string; role: string; avatar: string } | null>(null);
-  const [locStatus, setLocStatus] = useState<'pending' | 'active' | 'denied' | 'unavailable'>('pending');
+  const [locStatus, setLocStatus] = useState<'waiting' | 'active' | 'failed'>('waiting');
+  const [locError, setLocError] = useState('');
+  const watchRef = useRef<number | null>(null);
 
   useEffect(() => {
     getMe()
@@ -25,63 +27,77 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
       });
   }, [router]);
 
-  // Report location every 60 seconds
-  const locationRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Start location tracking with watchPosition (continuous, more reliable)
   useEffect(() => {
     if (!user) return;
+
     if (!('geolocation' in navigator)) {
-      setLocStatus('unavailable');
+      setLocStatus('failed');
+      setLocError('Geolocation not supported');
       return;
     }
 
-    const sendLocation = () => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLocStatus('active');
-          reportLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {});
-        },
-        (err) => {
-          if (err.code === 1) setLocStatus('denied'); // PERMISSION_DENIED
-          else setLocStatus('unavailable');
-        },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
-      );
-    };
-
-    // Check permission first, then start tracking
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'geolocation' }).then(result => {
-        if (result.state === 'denied') {
-          setLocStatus('denied');
-        } else {
-          sendLocation();
-        }
-        result.onchange = () => {
-          if (result.state === 'denied') setLocStatus('denied');
-          else sendLocation();
-        };
-      }).catch(() => sendLocation());
-    } else {
-      sendLocation();
+    // Check if HTTPS
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+      setLocStatus('failed');
+      setLocError('HTTPS required');
+      return;
     }
 
-    locationRef.current = setInterval(sendLocation, 60000);
-    return () => { if (locationRef.current) clearInterval(locationRef.current); };
+    startTracking();
+
+    return () => {
+      if (watchRef.current !== null) {
+        navigator.geolocation.clearWatch(watchRef.current);
+      }
+    };
   }, [user]);
 
-  const requestLocation = () => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setLocStatus('active');
-          reportLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {});
-        },
-        () => {
-          setLocStatus('denied');
-        },
-        { enableHighAccuracy: true, timeout: 15000 }
-      );
+  const startTracking = () => {
+    setLocStatus('waiting');
+    setLocError('');
+
+    // Clear previous watch
+    if (watchRef.current !== null) {
+      navigator.geolocation.clearWatch(watchRef.current);
     }
+
+    // Use watchPosition for continuous tracking
+    watchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        setLocStatus('active');
+        setLocError('');
+        reportLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {});
+      },
+      (err) => {
+        setLocStatus('failed');
+        if (err.code === 1) setLocError('Permission denied — tap Allow when prompted');
+        else if (err.code === 2) setLocError('Location unavailable — turn on GPS/Location in phone settings');
+        else if (err.code === 3) setLocError('Location timeout — check GPS is enabled');
+        else setLocError('Location error');
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
+    );
+  };
+
+  const requestLocation = () => {
+    // First try getCurrentPosition to trigger the permission prompt
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocStatus('active');
+        setLocError('');
+        reportLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {});
+        // Re-start watchPosition
+        startTracking();
+      },
+      (err) => {
+        setLocStatus('failed');
+        if (err.code === 1) setLocError('Permission denied — tap Allow when prompted');
+        else if (err.code === 2) setLocError('Turn on GPS/Location in phone settings');
+        else setLocError('Location timeout — check GPS');
+      },
+      { enableHighAccuracy: false, timeout: 20000 }
+    );
   };
 
   if (!user) return null;
@@ -104,28 +120,26 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Location status dot */}
           <div className={`w-2.5 h-2.5 rounded-full ${
             locStatus === 'active' ? 'bg-emerald-400 animate-pulse' :
-            locStatus === 'denied' ? 'bg-red-400' :
-            locStatus === 'pending' ? 'bg-amber-400 animate-pulse' :
-            'bg-slate-500'
-          }`} title={locStatus === 'active' ? 'Location active' : locStatus === 'denied' ? 'Location denied' : 'Location pending'} />
+            locStatus === 'failed' ? 'bg-red-400' :
+            'bg-amber-400 animate-pulse'
+          }`} />
           <div className="w-8 h-8 rounded-full bg-teal-600/30 flex items-center justify-center text-[10px] font-bold text-teal-400">
             {user.avatar || user.name.split(' ').map(n => n[0]).join('')}
           </div>
         </div>
       </header>
 
-      {/* Location permission banner */}
-      {locStatus === 'denied' && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center justify-center gap-3">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
-          </svg>
-          <button onClick={requestLocation} className="text-sm font-bold text-amber-800 bg-amber-200 px-4 py-1.5 rounded-lg">
+      {/* Location banner — shows for ANY non-active state */}
+      {locStatus !== 'active' && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 text-center">
+          <button onClick={requestLocation} className="text-sm font-bold text-amber-800 bg-amber-200 px-5 py-2 rounded-lg">
             Enable Location to Use This App
           </button>
+          {locError && (
+            <p className="text-[11px] text-red-600 mt-1.5">{locError}</p>
+          )}
         </div>
       )}
 
