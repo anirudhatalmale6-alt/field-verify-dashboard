@@ -9,6 +9,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const [user, setUser] = useState<{ name: string; role: string; avatar: string } | null>(null);
+  const [locStatus, setLocStatus] = useState<'pending' | 'active' | 'denied' | 'unavailable'>('pending');
 
   useEffect(() => {
     getMe()
@@ -28,21 +29,63 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
   const locationRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     if (!user) return;
+    if (!('geolocation' in navigator)) {
+      setLocStatus('unavailable');
+      return;
+    }
+
     const sendLocation = () => {
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            reportLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {});
-          },
-          () => {}, // silently fail
-          { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
-        );
-      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLocStatus('active');
+          reportLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {});
+        },
+        (err) => {
+          if (err.code === 1) setLocStatus('denied'); // PERMISSION_DENIED
+          else setLocStatus('unavailable');
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
+      );
     };
-    sendLocation(); // send immediately
+
+    // Check permission first, then start tracking
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'geolocation' }).then(result => {
+        if (result.state === 'denied') {
+          setLocStatus('denied');
+        } else {
+          sendLocation();
+        }
+        result.onchange = () => {
+          if (result.state === 'denied') setLocStatus('denied');
+          else sendLocation();
+        };
+      }).catch(() => sendLocation());
+    } else {
+      sendLocation();
+    }
+
     locationRef.current = setInterval(sendLocation, 60000);
     return () => { if (locationRef.current) clearInterval(locationRef.current); };
   }, [user]);
+
+  const requestLocation = () => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setLocStatus('active');
+          reportLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {});
+        },
+        (err) => {
+          if (err.code === 1) {
+            setLocStatus('denied');
+            alert('Location permission denied. Please enable location in your browser settings (tap the lock icon in the address bar) and reload the page.');
+          }
+        },
+        { enableHighAccuracy: true, timeout: 15000 }
+      );
+    }
+  };
 
   if (!user) return null;
 
@@ -64,11 +107,31 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Location status dot */}
+          <div className={`w-2.5 h-2.5 rounded-full ${
+            locStatus === 'active' ? 'bg-emerald-400 animate-pulse' :
+            locStatus === 'denied' ? 'bg-red-400' :
+            locStatus === 'pending' ? 'bg-amber-400 animate-pulse' :
+            'bg-slate-500'
+          }`} title={locStatus === 'active' ? 'Location active' : locStatus === 'denied' ? 'Location denied' : 'Location pending'} />
           <div className="w-8 h-8 rounded-full bg-teal-600/30 flex items-center justify-center text-[10px] font-bold text-teal-400">
             {user.avatar || user.name.split(' ').map(n => n[0]).join('')}
           </div>
         </div>
       </header>
+
+      {/* Location permission banner */}
+      {locStatus === 'denied' && (
+        <div className="bg-red-50 border-b border-red-200 px-4 py-2.5 flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+          </svg>
+          <p className="text-xs text-red-700 flex-1">Location access required for tracking.</p>
+          <button onClick={requestLocation} className="text-[10px] font-bold text-red-600 bg-red-100 px-2.5 py-1 rounded-lg">
+            Enable
+          </button>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 pb-20">
