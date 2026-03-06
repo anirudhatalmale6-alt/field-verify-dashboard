@@ -79,7 +79,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
         (err) => {
           if (err.code === 1) {
             setLocStatus('denied');
-            alert('Location permission denied. Please enable location in your browser settings (tap the lock icon in the address bar) and reload the page.');
+            alert('Please enable location access:\n\n1. Tap the lock/info icon in the address bar\n2. Allow Location\n3. Reload the page');
           }
         },
         { enableHighAccuracy: true, timeout: 15000 }
@@ -122,13 +122,12 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
 
       {/* Location permission banner */}
       {locStatus === 'denied' && (
-        <div className="bg-red-50 border-b border-red-200 px-4 py-2.5 flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex items-center justify-center gap-3">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
           </svg>
-          <p className="text-xs text-red-700 flex-1">Location access required for tracking.</p>
-          <button onClick={requestLocation} className="text-[10px] font-bold text-red-600 bg-red-100 px-2.5 py-1 rounded-lg">
-            Enable
+          <button onClick={requestLocation} className="text-sm font-bold text-amber-800 bg-amber-200 px-4 py-1.5 rounded-lg">
+            Enable Location to Use This App
           </button>
         </div>
       )}
