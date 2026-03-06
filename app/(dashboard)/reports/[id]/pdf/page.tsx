@@ -53,6 +53,7 @@ interface ReportDetail {
   special_remarks: string;
   summary_remarks: string | null;
   verification_result: string | null;
+  negative_reason: string | null;
   bank_name: string;
   fir_no: string;
   applicant: string;
@@ -361,6 +362,12 @@ export default function PDFPreviewPage() {
                 }`}>
                   {report.verification_result}
                 </span>
+                {report.negative_reason && (report.verification_result === 'NEGATIVE' || report.verification_result === 'REFER TO CREDIT') && (
+                  <div className="mt-2 bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-[9px] uppercase tracking-wider text-red-400 font-semibold mb-1">Reason</p>
+                    <p className="text-xs text-red-700 leading-relaxed whitespace-pre-line">{report.negative_reason}</p>
+                  </div>
+                )}
               </div>
             </section>
           )}
@@ -414,8 +421,7 @@ export default function PDFPreviewPage() {
               <PDFField label="Field Executive" value={`${report.executive_name} (${report.executive_id})`} />
               <PDFField label="Submitted by Maker" value={formatDateTime(report.submitted_at)} />
               {report.reviewed_at && <PDFField label="Reviewed" value={formatDateTime(report.reviewed_at)} />}
-              {report.approved_at && <PDFField label="Submitted by Checker" value={formatDateTime(report.approved_at)} />}
-              <PDFField label="Status" value={getStatusLabel(report.status)} />
+              <PDFField label="Submitted by Checker" value={report.approved_at ? formatDateTime(report.approved_at) : 'Pending'} />
             </div>
           </section>
 

@@ -187,6 +187,9 @@ function initializeSchema(db: Database.Database) {
   if (!reportCols.find(c => c.name === 'verification_result')) {
     db.exec("ALTER TABLE reports ADD COLUMN verification_result TEXT");
   }
+  if (!reportCols.find(c => c.name === 'negative_reason')) {
+    db.exec("ALTER TABLE reports ADD COLUMN negative_reason TEXT");
+  }
 
   // Seed default admin if no users exist
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };

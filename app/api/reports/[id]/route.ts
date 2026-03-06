@@ -109,6 +109,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         .run(generateId('AUD'), id, 'Verification Result Updated', user.name, `Verification result set to: ${body.verification_result}`);
     }
 
+    // Update negative reason
+    if (typeof body.negative_reason === 'string') {
+      db.prepare(`UPDATE reports SET negative_reason = ?, updated_at = datetime('now') WHERE id = ?`).run(body.negative_reason, id);
+    }
+
     // Add internal note
     if (body.internal_note) {
       const currentNotes = existing.internal_notes || '';

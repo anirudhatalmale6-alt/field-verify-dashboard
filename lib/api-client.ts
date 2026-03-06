@@ -89,7 +89,7 @@ export async function getReport(id: string) {
   return fetchAPI(`/api/reports/${id}`);
 }
 
-export async function updateReport(id: string, data: { status?: string; internal_note?: string; summary_remarks?: string; verification_result?: string }) {
+export async function updateReport(id: string, data: { status?: string; internal_note?: string; summary_remarks?: string; verification_result?: string; negative_reason?: string }) {
   return fetchAPI(`/api/reports/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data),

@@ -55,6 +55,7 @@ interface ReportDetail {
   special_remarks: string;
   summary_remarks: string | null;
   verification_result: string | null;
+  negative_reason: string | null;
   bank_name: string;
   fir_no: string;
   applicant: string;
@@ -104,6 +105,8 @@ export default function ReportDetailPage() {
   const [summaryText, setSummaryText] = useState('');
   const [savingSummary, setSavingSummary] = useState(false);
   const [savingResult, setSavingResult] = useState(false);
+  const [negativeReason, setNegativeReason] = useState('');
+  const [savingReason, setSavingReason] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -111,6 +114,7 @@ export default function ReportDetailPage() {
       setReport(data.report);
       setPhotos(data.photos || []);
       setAuditTrail(data.auditTrail || []);
+      setNegativeReason(data.report.negative_reason || '');
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -178,6 +182,18 @@ export default function ReportDetailPage() {
       alert('Failed to save: ' + (err as Error).message);
     } finally {
       setSavingResult(false);
+    }
+  };
+
+  const handleSaveReason = async () => {
+    setSavingReason(true);
+    try {
+      await updateReport(reportId, { negative_reason: negativeReason });
+      await fetchData();
+    } catch (err) {
+      alert('Failed to save reason: ' + (err as Error).message);
+    } finally {
+      setSavingReason(false);
     }
   };
 
@@ -526,6 +542,27 @@ export default function ReportDetailPage() {
                   </span>
                 )}
               </div>
+              {(report.verification_result === 'NEGATIVE' || report.verification_result === 'REFER TO CREDIT') && (
+                <div className="mt-3">
+                  <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1 block">
+                    Reason for {report.verification_result === 'NEGATIVE' ? 'Negative' : 'Refer to Credit'}
+                  </label>
+                  <textarea
+                    value={negativeReason}
+                    onChange={e => setNegativeReason(e.target.value)}
+                    rows={3}
+                    placeholder={`Enter reason why the case is ${report.verification_result.toLowerCase()}...`}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none resize-vertical"
+                  />
+                  <button
+                    onClick={handleSaveReason}
+                    disabled={savingReason}
+                    className="mt-2 px-4 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                  >
+                    {savingReason ? 'Saving...' : 'Save Reason'}
+                  </button>
+                </div>
+              )}
             </FormSection>
 
             <FormSection title="Visit Timeline" icon="clock">

@@ -11,12 +11,25 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const singleId = searchParams.get('id');
     const status = searchParams.get('status');
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const executiveId = searchParams.get('executive_id');
 
     const db = getDb();
+
+    // Single case fetch
+    if (singleId) {
+      const c = db.prepare(`
+        SELECT c.*, u.name as executive_name
+        FROM cases c
+        LEFT JOIN users u ON c.executive_id = u.id
+        WHERE c.id = ?
+      `).get(singleId);
+      if (!c) return NextResponse.json({ error: 'Case not found' }, { status: 404 });
+      return NextResponse.json({ case: c });
+    }
 
     let query = `
       SELECT c.*, u.name as executive_name
