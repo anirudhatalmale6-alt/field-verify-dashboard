@@ -701,11 +701,11 @@ export default function ReportDetailPage() {
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {photos.map((photo) => (
                 <div key={photo.id} className="photo-card bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                  <div className="h-[200px] bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center relative">
+                  <div className="bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center relative">
                     {photo.file_path ? (
-                      <img src={photo.file_path} alt={photo.label} className="w-full h-full object-cover" />
+                      <img src={photo.file_path} alt={photo.label} className="w-full h-auto object-contain" />
                     ) : (
-                      <div className="relative text-center">
+                      <div className="relative text-center py-12">
                         <svg className="mx-auto mb-1 text-slate-400" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21,15 16,10 5,21" />
                         </svg>
@@ -713,7 +713,7 @@ export default function ReportDetailPage() {
                       </div>
                     )}
                     {photo.latitude && photo.longitude && (
-                      <div className="absolute top-2 right-2 bg-navy-900/80 backdrop-blur-sm text-white text-[9px] px-2 py-1 rounded-lg flex items-center gap-1">
+                      <div className="absolute top-2 right-2 bg-emerald-600/90 backdrop-blur-sm text-white text-[9px] px-2 py-1 rounded-lg flex items-center gap-1">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
                         </svg>
@@ -725,8 +725,8 @@ export default function ReportDetailPage() {
                     <p className="text-sm font-medium text-navy-900">{photo.label}</p>
                     <p className="text-[10px] text-slate-400">{formatDateTime(photo.captured_at)}</p>
                     {photo.latitude && photo.longitude && (
-                      <p className="text-[10px] text-slate-400 mt-0.5">
-                        {photo.latitude.toFixed(4)}, {photo.longitude.toFixed(4)}
+                      <p className="text-[10px] text-emerald-600 font-medium mt-0.5">
+                        GPS: {photo.latitude.toFixed(6)}, {photo.longitude.toFixed(6)}
                       </p>
                     )}
                   </div>

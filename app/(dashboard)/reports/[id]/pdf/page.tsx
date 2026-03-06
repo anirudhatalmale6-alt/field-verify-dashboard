@@ -415,11 +415,11 @@ export default function PDFPreviewPage() {
               <div className="grid grid-cols-2 gap-3 mt-2">
                 {photos.map(photo => (
                   <div key={photo.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200">
-                    <div className="h-[180px] flex items-center justify-center bg-slate-100">
+                    <div className="flex items-center justify-center bg-slate-100">
                       {photo.file_path ? (
-                        <img src={photo.file_path} alt={photo.label} className="w-full h-full object-cover" />
+                        <img src={photo.file_path} alt={photo.label} className="w-full h-auto object-contain" />
                       ) : (
-                        <svg className="text-slate-300" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="text-slate-300 py-12" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21,15 16,10 5,21" />
                         </svg>
                       )}
@@ -429,9 +429,9 @@ export default function PDFPreviewPage() {
                       <div className="flex items-center justify-between mt-0.5">
                         <p className="text-[9px] text-slate-400">{formatDateTime(photo.captured_at)}</p>
                         {photo.latitude && photo.longitude ? (
-                          <p className="text-[9px] text-teal-600 font-medium">GPS: {photo.latitude.toFixed(4)}, {photo.longitude.toFixed(4)}</p>
+                          <p className="text-[9px] text-emerald-600 font-bold">GPS: {photo.latitude.toFixed(6)}, {photo.longitude.toFixed(6)}</p>
                         ) : (
-                          <p className="text-[9px] text-slate-400">No GPS</p>
+                          <p className="text-[9px] text-red-400 font-medium">No GPS</p>
                         )}
                       </div>
                     </div>

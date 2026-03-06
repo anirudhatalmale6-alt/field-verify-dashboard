@@ -15,6 +15,45 @@ function decimalToDMS(dd: number): [[number, number], [number, number], [number,
   return [[deg, 1], [min, 1], [sec, 100]];
 }
 
+// Convert EXIF DMS rational array to decimal degrees
+function dmsToDecimal(dms: [[number, number], [number, number], [number, number]], ref: string): number {
+  const deg = dms[0][0] / dms[0][1];
+  const min = dms[1][0] / dms[1][1];
+  const sec = dms[2][0] / dms[2][1];
+  let dd = deg + min / 60 + sec / 3600;
+  if (ref === 'S' || ref === 'W') dd = -dd;
+  return dd;
+}
+
+// Extract GPS coordinates from JPEG EXIF data
+function extractGpsFromExif(buffer: Buffer): { lat: number; lng: number } | null {
+  try {
+    const base64 = buffer.toString('base64');
+    const dataUri = `data:image/jpeg;base64,${base64}`;
+    const exifData = piexif.load(dataUri) as Record<string, Record<number, unknown>>;
+
+    if (!exifData.GPS) return null;
+
+    const gps = exifData.GPS;
+    const latData = gps[piexif.GPSIFD.GPSLatitude] as [[number, number], [number, number], [number, number]] | undefined;
+    const latRef = gps[piexif.GPSIFD.GPSLatitudeRef] as string | undefined;
+    const lngData = gps[piexif.GPSIFD.GPSLongitude] as [[number, number], [number, number], [number, number]] | undefined;
+    const lngRef = gps[piexif.GPSIFD.GPSLongitudeRef] as string | undefined;
+
+    if (!latData || !latRef || !lngData || !lngRef) return null;
+
+    const lat = dmsToDecimal(latData, latRef);
+    const lng = dmsToDecimal(lngData, lngRef);
+
+    if (lat === 0 && lng === 0) return null;
+
+    return { lat, lng };
+  } catch (err) {
+    console.error('EXIF read error (non-fatal):', err);
+    return null;
+  }
+}
+
 // Embed GPS coordinates into JPEG EXIF data
 function embedGpsExif(buffer: Buffer, lat: number, lng: number): Buffer {
   try {
@@ -95,10 +134,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
       let buffer: Buffer = Buffer.from(await file.arrayBuffer()) as Buffer;
 
-      // Embed GPS EXIF data into JPEG photos
-      const lat = latitudes[i] ? parseFloat(latitudes[i]) : null;
-      const lng = longitudes[i] ? parseFloat(longitudes[i]) : null;
-      if (lat && lat !== 0 && lng && lng !== 0 && (ext === 'jpg' || ext === 'jpeg')) {
+      // Get GPS coordinates: prefer browser-provided, fallback to EXIF extraction
+      let lat = latitudes[i] ? parseFloat(latitudes[i]) : null;
+      let lng = longitudes[i] ? parseFloat(longitudes[i]) : null;
+      const isJpeg = ext === 'jpg' || ext === 'jpeg';
+
+      // If no browser GPS, try to extract from photo EXIF data
+      if ((!lat || lat === 0) && (!lng || lng === 0) && isJpeg) {
+        const exifGps = extractGpsFromExif(buffer);
+        if (exifGps) {
+          lat = exifGps.lat;
+          lng = exifGps.lng;
+          console.log(`Extracted EXIF GPS for ${file.name}: ${lat}, ${lng}`);
+        }
+      }
+
+      // Embed GPS EXIF data into JPEG if we have coordinates but photo doesn't
+      if (lat && lat !== 0 && lng && lng !== 0 && isJpeg) {
         buffer = embedGpsExif(buffer, lat, lng) as Buffer;
       }
 
