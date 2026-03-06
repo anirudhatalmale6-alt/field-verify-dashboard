@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { getMe, reportLocation } from '@/lib/api-client';
+import { getMe, reportLocation, getChatContacts } from '@/lib/api-client';
 
 export default function ExecutiveLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -100,6 +100,37 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
     );
   };
 
+  // Chat notification polling
+  const [unreadChat, setUnreadChat] = useState(0);
+  const prevUnread = useRef(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const pollUnread = useCallback(async () => {
+    try {
+      const data = await getChatContacts();
+      const total = data.totalUnread || 0;
+      setUnreadChat(total);
+      if (total > prevUnread.current && prevUnread.current >= 0 && !pathname.startsWith('/exec/chat')) {
+        if (!audioRef.current) audioRef.current = new Audio('/notify.wav');
+        audioRef.current.play().catch(() => {});
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('New message', { body: 'You have a new chat message from office', icon: '/icon-192x192.png' });
+        }
+      }
+      prevUnread.current = total;
+    } catch {}
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!user) return;
+    pollUnread();
+    const interval = setInterval(pollUnread, 5000);
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+    return () => clearInterval(interval);
+  }, [user, pollUnread]);
+
   if (!user) return null;
 
   const tabs = [
@@ -157,11 +188,18 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors relative ${
                   isActive ? 'text-teal-600' : 'text-slate-400'
                 }`}
               >
-                <tab.icon active={isActive} />
+                <div className="relative">
+                  <tab.icon active={isActive} />
+                  {tab.href === '/exec/chat' && unreadChat > 0 && (
+                    <span className="absolute -top-1.5 -right-2.5 bg-red-500 text-white text-[8px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5">
+                      {unreadChat > 99 ? '99+' : unreadChat}
+                    </span>
+                  )}
+                </div>
                 <span className={`text-[10px] font-semibold ${isActive ? 'text-teal-600' : 'text-slate-400'}`}>
                   {tab.label}
                 </span>

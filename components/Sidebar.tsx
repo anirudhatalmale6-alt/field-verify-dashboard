@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { logout, getMe } from '@/lib/api-client';
+import { logout, getMe, getChatContacts } from '@/lib/api-client';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
@@ -114,10 +114,43 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<{ name: string; role: string } | null>(null);
+  const [unreadChat, setUnreadChat] = useState(0);
+  const prevUnread = useRef(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     getMe().then(data => setUser(data.user)).catch(() => {});
+    audioRef.current = new Audio('/notify.wav');
+    audioRef.current.volume = 0.5;
   }, []);
+
+  // Poll unread chat count every 5 seconds
+  const pollUnread = useCallback(async () => {
+    try {
+      const data = await getChatContacts();
+      const total = data.totalUnread || 0;
+      setUnreadChat(total);
+      // Play sound if new messages arrived and not on chat page
+      if (total > prevUnread.current && prevUnread.current >= 0 && !window.location.pathname.startsWith('/chat')) {
+        audioRef.current?.play().catch(() => {});
+        // Browser notification
+        if (Notification.permission === 'granted') {
+          new Notification('New message', { body: 'You have a new chat message', icon: '/icon-192x192.png' });
+        }
+      }
+      prevUnread.current = total;
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    pollUnread();
+    const interval = setInterval(pollUnread, 5000);
+    // Request notification permission
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+    return () => clearInterval(interval);
+  }, [pollUnread]);
 
   const handleLogout = async () => {
     try {
@@ -160,7 +193,12 @@ export default function Sidebar() {
                   }`}
                 >
                   <item.icon />
-                  {item.label}
+                  <span className="flex-1">{item.label}</span>
+                  {item.href === '/chat' && unreadChat > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                      {unreadChat > 99 ? '99+' : unreadChat}
+                    </span>
+                  )}
                 </Link>
               </li>
             );
