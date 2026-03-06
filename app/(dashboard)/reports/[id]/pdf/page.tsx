@@ -72,21 +72,12 @@ interface Photo {
   captured_at: string;
 }
 
-interface AuditEntry {
-  id: string;
-  action: string;
-  performed_by: string;
-  details: string;
-  performed_at: string;
-}
-
 export default function PDFPreviewPage() {
   const params = useParams();
   const reportId = params.id as string;
 
   const [report, setReport] = useState<ReportDetail | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [auditTrail, setAuditTrail] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -95,7 +86,6 @@ export default function PDFPreviewPage() {
         const data = await getReport(reportId);
         setReport(data.report);
         setPhotos(data.photos || []);
-        setAuditTrail(data.auditTrail || []);
       } catch {
         // handled below
       } finally {
