@@ -146,6 +146,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ batchId, imported, failed, total: body.cases.length }, { status: 201 });
     }
 
+    // Single case creation (manual add)
+    if (body.customer_name || body.fir_no) {
+      const caseId = generateId('CASE');
+      const execId = body.executive_id || null;
+
+      db.prepare(`
+        INSERT INTO cases (id, bank_name, date_and_time, fir_no, applicant, purpose_of_loan, finance_amount, customer_name, address, location, contact_number, executive_id, customer_category, status, import_batch)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        caseId,
+        body.bank_name || 'Unknown',
+        body.date_and_time || null,
+        body.fir_no || `FIR-${Date.now()}`,
+        body.applicant || '',
+        body.purpose_of_loan || '',
+        body.finance_amount || '',
+        body.customer_name || 'Unknown',
+        body.address || '',
+        body.location || '',
+        body.contact_number || '',
+        execId,
+        body.customer_category || 'HOME',
+        execId ? 'assigned' : 'unassigned',
+        'MANUAL',
+      );
+
+      // Audit trail
+      db.prepare(`INSERT INTO audit_trail (id, case_id, action, performed_by, details) VALUES (?, ?, ?, ?, ?)`)
+        .run(generateId('AUD'), caseId, 'Case Created Manually', user.name || user.id, `Manual case entry by admin`);
+
+      return NextResponse.json({ caseId, message: 'Case created successfully' }, { status: 201 });
+    }
+
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   } catch (error) {
     console.error('Case create error:', error);

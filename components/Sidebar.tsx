@@ -8,6 +8,7 @@ import { logout, getMe, getChatContacts } from '@/lib/api-client';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
   { href: '/cases', label: 'Cases', icon: CasesIcon },
+  { href: '/add-case', label: 'Add Case', icon: AddCaseIcon },
   { href: '/upload', label: 'Upload Excel', icon: UploadIcon },
   { href: '/reports', label: 'Reports', icon: ReportsIcon },
   { href: '/executives', label: 'Executives', icon: ExecutivesIcon },
@@ -57,6 +58,16 @@ function CasesIcon() {
       <line x1="2" y1="7" x2="18" y2="7" />
       <line x1="6" y1="3" x2="6" y2="7" />
       <line x1="14" y1="3" x2="14" y2="7" />
+    </svg>
+  );
+}
+
+function AddCaseIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="14" height="14" rx="2" />
+      <line x1="10" y1="7" x2="10" y2="13" />
+      <line x1="7" y1="10" x2="13" y2="10" />
     </svg>
   );
 }
