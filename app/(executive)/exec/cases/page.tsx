@@ -51,24 +51,30 @@ export default function ExecCasesPage() {
     }
   }, []);
 
-  // Trigger background geocoding of cases (runs once)
+  // Trigger background geocoding of cases (runs once, then re-fetches)
   useEffect(() => {
     if (geocodeTriggered.current) return;
     geocodeTriggered.current = true;
 
     const triggerGeocode = async () => {
       try {
-        // Fire and forget — geocode up to 5 cases per call, repeat 3 times
-        for (let i = 0; i < 3; i++) {
+        let anyGeocoded = false;
+        // Geocode up to 5 cases per call, repeat up to 15 times (covers re-geocoding)
+        for (let i = 0; i < 15; i++) {
           const res = await fetch('/api/geocode', { method: 'POST', credentials: 'include' });
           const data = await res.json();
+          if (data.geocoded > 0) anyGeocoded = true;
           if (data.remaining === 0) break;
-          // Small delay between batches
           await new Promise(r => setTimeout(r, 2000));
+        }
+        // Re-fetch cases with updated coordinates
+        if (anyGeocoded) {
+          fetchCases();
         }
       } catch {}
     };
     triggerGeocode();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchCases = useCallback(async () => {
