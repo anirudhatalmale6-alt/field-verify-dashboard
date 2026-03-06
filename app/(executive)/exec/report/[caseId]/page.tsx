@@ -33,7 +33,6 @@ interface SectionDef {
 
 const HOUSE_TYPES = ['KACCHA', 'PUCCA', 'SEMI PUCCA', 'APARTMENT', 'BUNGALOW', 'FLAT', 'CHAWL', 'INDEPENDENT HOUSE', 'OTHERS'];
 
-const PERSON_MET_OPTIONS = ['SELF', 'SPOUSE', 'RELATIVE', 'NEIGHBOR', 'SECURITY GUARD', 'NOT MET'];
 const OFFICE_OWNERSHIP_OPTIONS = ['OWNED', 'RENTED', 'SHARED'];
 const COMPANY_BOARD_OPTIONS = ['YES - SEEN', 'NO - NOT SEEN'];
 const SPOUSE_OCC_OPTIONS = ['HOUSEWIFE', 'SALARIED', 'SELF EMPLOYED', 'BUSINESS', 'STUDENT', 'OTHER'];
@@ -551,12 +550,27 @@ export default function VerificationFormPage() {
       {/* ════════════════════════════════════════════════ */}
       {currentSectionKey === 'location' && (
         <div className="space-y-3">
-          <DropdownField
-            label="Person Met"
-            value={form.person_met}
-            options={PERSON_MET_OPTIONS}
-            onChange={v => updateForm('person_met', v)}
-          />
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Person Met</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => updateForm('person_met', form.person_met === 'SELF' ? '' : 'SELF')}
+                className={`px-6 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
+                  form.person_met === 'SELF' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'
+                }`}
+              >
+                SELF
+              </button>
+              <input
+                type="text"
+                placeholder="Name & Relation (if other than self)"
+                value={form.person_met === 'SELF' ? '' : form.person_met}
+                onChange={e => updateForm('person_met', e.target.value)}
+                disabled={form.person_met === 'SELF'}
+                className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 disabled:bg-slate-50 disabled:text-slate-400"
+              />
+            </div>
+          </div>
           <FormField label="Landmark" value={form.landmark} onChange={v => updateForm('landmark', v)} />
           <div>
             <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Whether RVR or BVR</label>

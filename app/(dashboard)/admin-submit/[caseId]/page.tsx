@@ -28,7 +28,6 @@ interface PhotoItem {
 }
 
 const HOUSE_TYPES = ['KACCHA', 'PUCCA', 'SEMI PUCCA', 'APARTMENT', 'BUNGALOW', 'FLAT', 'CHAWL', 'INDEPENDENT HOUSE', 'OTHERS'];
-const PERSON_MET_OPTIONS = ['SELF', 'SPOUSE', 'RELATIVE', 'NEIGHBOR', 'SECURITY GUARD', 'NOT MET'];
 const OWNERSHIP_OPTIONS = ['OWNED', 'RENTED', 'COMPANY PROVIDED', 'OTHERS'];
 const OFFICE_OWNERSHIP_OPTIONS = ['OWNED', 'RENTED', 'SHARED'];
 const COMPANY_BOARD_OPTIONS = ['YES - SEEN', 'NO - NOT SEEN'];
@@ -264,11 +263,17 @@ export default function AdminSubmitPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1 block">Person Met</label>
-                <select value={form.person_met} onChange={e => updateField('person_met', e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                  <option value="">Select</option>
-                  {PERSON_MET_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
+                <div className="flex gap-2">
+                  <button onClick={() => updateField('person_met', form.person_met === 'SELF' ? '' : 'SELF')}
+                    className={`px-6 py-2 rounded-lg text-xs font-semibold transition-all ${form.person_met === 'SELF' ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>
+                    SELF
+                  </button>
+                  <input type="text" placeholder="Name & Relation (if other than self)"
+                    value={form.person_met === 'SELF' ? '' : form.person_met}
+                    onChange={e => updateField('person_met', e.target.value)}
+                    disabled={form.person_met === 'SELF'}
+                    className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-400" />
+                </div>
               </div>
               <Field label="Landmark" value={form.landmark} onChange={v => updateField('landmark', v)} />
               <div>
