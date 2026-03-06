@@ -91,6 +91,9 @@ export default function AdminSubmitPage() {
       .then(data => {
         if (data.case) {
           setCaseInfo(data.case);
+          let autoRvrBvr = 'RVR';
+          if (data.case.customer_category === 'OFFICE') autoRvrBvr = 'BVR';
+          else if (data.case.customer_category === 'HOME') autoRvrBvr = 'RVR';
           setForm(prev => ({
             ...prev,
             fir_reference_number: data.case.fir_no || '',
@@ -98,6 +101,7 @@ export default function AdminSubmitPage() {
             address: data.case.address || '',
             location: data.case.location || '',
             contact_number: data.case.contact_number || '',
+            rvr_or_bvr: autoRvrBvr,
           }));
         }
       })
@@ -279,12 +283,16 @@ export default function AdminSubmitPage() {
               <div>
                 <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1 block">RVR or BVR</label>
                 <div className="flex gap-2">
-                  {['RVR', 'BVR', 'RESI CUM OFFICE'].map(o => (
-                    <button key={o} onClick={() => updateField('rvr_or_bvr', o)}
-                      className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${form.rvr_or_bvr === o ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>
-                      {o}
-                    </button>
-                  ))}
+                  {['RVR', 'BVR', 'RESI CUM OFFICE'].map(o => {
+                    const categoryLocked = caseInfo?.customer_category === 'HOME' || caseInfo?.customer_category === 'OFFICE';
+                    return (
+                      <button key={o} onClick={() => !categoryLocked && updateField('rvr_or_bvr', o)}
+                        disabled={categoryLocked}
+                        className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${form.rvr_or_bvr === o ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600'} ${categoryLocked ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                        {o}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <Field label="Address" value={form.address} onChange={v => updateField('address', v)} />

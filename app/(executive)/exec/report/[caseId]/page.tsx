@@ -219,6 +219,10 @@ export default function VerificationFormPage() {
         if (data.cases && data.cases.length > 0) {
           const c = data.cases.find((x: CaseInfo) => x.id === caseId) || data.cases[0];
           setCaseInfo(c);
+          // Auto-set rvr_or_bvr based on customer_category
+          let autoRvrBvr = 'RVR';
+          if (c.customer_category === 'OFFICE') autoRvrBvr = 'BVR';
+          else if (c.customer_category === 'HOME') autoRvrBvr = 'RVR';
           setForm(prev => ({
             ...prev,
             customer_name: c.customer_name || '',
@@ -226,6 +230,7 @@ export default function VerificationFormPage() {
             location: c.location || '',
             contact_number: c.contact_number || '',
             fir_reference_number: c.fir_no || '',
+            rvr_or_bvr: autoRvrBvr,
           }));
         }
       } catch (err) {
@@ -575,17 +580,21 @@ export default function VerificationFormPage() {
           <div>
             <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Whether RVR or BVR</label>
             <div className="flex gap-2">
-              {['RVR', 'BVR', 'RESI CUM OFFICE'].map(opt => (
-                <button
-                  key={opt}
-                  onClick={() => updateForm('rvr_or_bvr', opt)}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
-                    form.rvr_or_bvr === opt ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
+              {['RVR', 'BVR', 'RESI CUM OFFICE'].map(opt => {
+                const categoryLocked = caseInfo?.customer_category === 'HOME' || caseInfo?.customer_category === 'OFFICE';
+                return (
+                  <button
+                    key={opt}
+                    onClick={() => !categoryLocked && updateForm('rvr_or_bvr', opt)}
+                    disabled={categoryLocked}
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
+                      form.rvr_or_bvr === opt ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'
+                    } ${categoryLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
             </div>
             {form.rvr_or_bvr === 'BVR' && (
               <p className="text-[10px] text-amber-600 mt-1.5 font-medium">

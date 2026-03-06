@@ -94,6 +94,15 @@ export default function PDFPreviewPage() {
     })();
   }, [reportId]);
 
+  // Set document title for PDF filename (CustomerName Category)
+  useEffect(() => {
+    if (report) {
+      const pdfTitle = `${report.customer_name} ${report.customer_category || report.rvr_or_bvr || ''}`.trim();
+      document.title = pdfTitle;
+      return () => { document.title = 'FieldVerify Pro — Verification Dashboard'; };
+    }
+  }, [report]);
+
   if (loading) {
     return (
       <div className="p-8 text-center">
@@ -122,6 +131,13 @@ export default function PDFPreviewPage() {
 
   return (
     <div className="p-6 lg:p-8">
+      <style>{`
+        @media print {
+          @page { margin: 10mm; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          section { break-inside: avoid; }
+        }
+      `}</style>
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-6 print:hidden">
         <div className="flex items-center gap-2 text-xs text-slate-400">
