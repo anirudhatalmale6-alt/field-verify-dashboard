@@ -413,45 +413,6 @@ export default function PDFPreviewPage() {
             </div>
           </section>
 
-          {report.internal_notes && (
-            <section className="mb-4">
-              <SectionTitle title="Internal Notes" />
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
-                <p className="text-xs text-amber-900 leading-relaxed whitespace-pre-line">{report.internal_notes}</p>
-              </div>
-            </section>
-          )}
-
-          <section className="mb-4">
-            <SectionTitle title="Audit Trail" />
-            {auditTrail.length > 0 ? (
-              <div className="mt-2 border border-slate-200 rounded-lg overflow-hidden">
-                <table className="w-full text-[10px]">
-                  <thead>
-                    <tr className="bg-slate-50">
-                      <th className="text-left px-2 py-1.5 font-semibold text-slate-500 text-[9px] uppercase tracking-wider">Time</th>
-                      <th className="text-left px-2 py-1.5 font-semibold text-slate-500 text-[9px] uppercase tracking-wider">Action</th>
-                      <th className="text-left px-2 py-1.5 font-semibold text-slate-500 text-[9px] uppercase tracking-wider">By</th>
-                      <th className="text-left px-2 py-1.5 font-semibold text-slate-500 text-[9px] uppercase tracking-wider">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {auditTrail.map(entry => (
-                      <tr key={entry.id} className="border-t border-slate-100">
-                        <td className="px-2 py-1.5 text-slate-600 font-mono whitespace-nowrap">{formatDateTime(entry.performed_at)}</td>
-                        <td className="px-2 py-1.5 text-slate-800 font-medium">{entry.action}</td>
-                        <td className="px-2 py-1.5 text-slate-600">{entry.performed_by}</td>
-                        <td className="px-2 py-1.5 text-slate-500">{entry.details}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-400 mt-2">No audit trail entries recorded.</p>
-            )}
-          </section>
-
           <div className="border-t border-slate-200 pt-4 mt-4">
             <div className="flex items-center justify-between text-[10px] text-slate-400">
               <div>
