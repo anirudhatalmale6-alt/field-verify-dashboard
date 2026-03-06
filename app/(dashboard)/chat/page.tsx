@@ -35,23 +35,28 @@ export default function AdminChatPage() {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const messagesRef = useRef<Message[]>([]);
+
+  // Keep ref in sync with state
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   useEffect(() => {
     getMe().then(d => setMyId(d.user.id)).catch(() => {});
     loadContacts();
   }, []);
 
-  const loadContacts = async () => {
+  const loadContacts = useCallback(async () => {
     try {
       const data = await getChatContacts();
       setContacts(data.contacts);
     } catch {}
-  };
+  }, []);
 
   const loadMessages = useCallback(async (contactId: string) => {
     try {
       const data = await getChatMessages(contactId);
       setMessages(data.messages);
+      messagesRef.current = data.messages;
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     } catch {}
   }, []);
@@ -59,28 +64,33 @@ export default function AdminChatPage() {
   const selectContact = (contact: Contact) => {
     setSelectedContact(contact);
     loadMessages(contact.id);
-    // Clear unread for this contact locally
     setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, unread_count: 0 } : c));
   };
 
-  // Poll for new messages every 4 seconds
+  // Poll for new messages every 4 seconds — only depends on selectedContact
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
     if (!selectedContact) return;
+    const contactId = selectedContact.id;
     pollRef.current = setInterval(async () => {
       try {
-        const last = messages.length > 0 ? messages[messages.length - 1].created_at : undefined;
-        const data = await getChatMessages(selectedContact.id, last);
+        const msgs = messagesRef.current;
+        const last = msgs.length > 0 ? msgs[msgs.length - 1].created_at : undefined;
+        const data = await getChatMessages(contactId, last);
         if (data.messages.length > 0) {
-          setMessages(prev => [...prev, ...data.messages]);
-          setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+          // Deduplicate by id
+          const existingIds = new Set(msgs.map(m => m.id));
+          const newMsgs = data.messages.filter((m: Message) => !existingIds.has(m.id));
+          if (newMsgs.length > 0) {
+            setMessages(prev => [...prev, ...newMsgs]);
+            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+          }
         }
       } catch {}
-      // Also refresh contacts for unread counts
       loadContacts();
     }, 4000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [selectedContact, messages, loadContacts]);
+  }, [selectedContact, loadContacts]);
 
   const handleSend = async () => {
     if (!selectedContact || !newMessage.trim() || sending) return;

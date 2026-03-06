@@ -156,6 +156,18 @@ export async function getAuditTrail(action?: string) {
   return fetchAPI(`/api/audit?${sp.toString()}`);
 }
 
+// Location tracking
+export async function reportLocation(latitude: number, longitude: number) {
+  return fetchAPI('/api/location', {
+    method: 'POST',
+    body: JSON.stringify({ latitude, longitude }),
+  });
+}
+
+export async function getExecutiveLocations() {
+  return fetchAPI('/api/location');
+}
+
 // Chat
 export async function getChatContacts() {
   return fetchAPI('/api/chat');

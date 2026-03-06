@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       SELECT m.*, u.name as sender_name, u.avatar as sender_avatar
       FROM chat_messages m
       JOIN users u ON u.id = m.sender_id
-      WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?)
+      WHERE ((m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?))
     `;
     const params: (string | number)[] = [user.id, withUser, withUser, user.id];
 

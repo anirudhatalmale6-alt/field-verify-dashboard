@@ -34,27 +34,32 @@ export default function ExecChatPage() {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const messagesRef = useRef<Message[]>([]);
+  const autoSelected = useRef(false);
+
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   useEffect(() => {
     getMe().then(d => setMyId(d.user.id)).catch(() => {});
     loadContacts();
   }, []);
 
-  const loadContacts = async () => {
+  const loadContacts = useCallback(async () => {
     try {
       const data = await getChatContacts();
       setContacts(data.contacts);
-      // Auto-select first contact (admin) if only one
-      if (data.contacts.length === 1 && !selectedContact) {
+      if (data.contacts.length === 1 && !autoSelected.current) {
+        autoSelected.current = true;
         setSelectedContact(data.contacts[0]);
       }
     } catch {}
-  };
+  }, []);
 
   const loadMessages = useCallback(async (contactId: string) => {
     try {
       const data = await getChatMessages(contactId);
       setMessages(data.messages);
+      messagesRef.current = data.messages;
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     } catch {}
   }, []);
@@ -66,22 +71,28 @@ export default function ExecChatPage() {
     }
   }, [selectedContact, loadMessages]);
 
-  // Poll every 4s
+  // Poll every 4s — only depends on selectedContact
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
     if (!selectedContact) return;
+    const contactId = selectedContact.id;
     pollRef.current = setInterval(async () => {
       try {
-        const last = messages.length > 0 ? messages[messages.length - 1].created_at : undefined;
-        const data = await getChatMessages(selectedContact.id, last);
+        const msgs = messagesRef.current;
+        const last = msgs.length > 0 ? msgs[msgs.length - 1].created_at : undefined;
+        const data = await getChatMessages(contactId, last);
         if (data.messages.length > 0) {
-          setMessages(prev => [...prev, ...data.messages]);
-          setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+          const existingIds = new Set(msgs.map(m => m.id));
+          const newMsgs = data.messages.filter((m: Message) => !existingIds.has(m.id));
+          if (newMsgs.length > 0) {
+            setMessages(prev => [...prev, ...newMsgs]);
+            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+          }
         }
       } catch {}
     }, 4000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [selectedContact, messages]);
+  }, [selectedContact]);
 
   const handleSend = async () => {
     if (!selectedContact || !newMessage.trim() || sending) return;

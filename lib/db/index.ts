@@ -204,6 +204,14 @@ function initializeSchema(db: Database.Database) {
     db.exec("ALTER TABLE reports ADD COLUMN negative_reason TEXT");
   }
 
+  // Migration: add location tracking columns to users
+  const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  if (!userCols.find(c => c.name === 'last_latitude')) {
+    db.exec("ALTER TABLE users ADD COLUMN last_latitude REAL");
+    db.exec("ALTER TABLE users ADD COLUMN last_longitude REAL");
+    db.exec("ALTER TABLE users ADD COLUMN last_location_at TEXT");
+  }
+
   // Seed default admin if no users exist
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {

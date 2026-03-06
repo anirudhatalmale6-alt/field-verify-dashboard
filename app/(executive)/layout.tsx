@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { getMe } from '@/lib/api-client';
+import { getMe, reportLocation } from '@/lib/api-client';
 
 export default function ExecutiveLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -23,6 +23,26 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
         router.push('/login');
       });
   }, [router]);
+
+  // Report location every 60 seconds
+  const locationRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    const sendLocation = () => {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            reportLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {});
+          },
+          () => {}, // silently fail
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+        );
+      }
+    };
+    sendLocation(); // send immediately
+    locationRef.current = setInterval(sendLocation, 60000);
+    return () => { if (locationRef.current) clearInterval(locationRef.current); };
+  }, [user]);
 
   if (!user) return null;
 
