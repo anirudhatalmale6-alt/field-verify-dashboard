@@ -135,15 +135,24 @@ export async function POST(request: NextRequest) {
     const auditInsert = db.prepare(`INSERT INTO audit_trail (id, case_id, action, performed_by, details) VALUES (?, ?, ?, ?, ?)`);
 
     let imported = 0;
+    let updated = 0;
     let failed = 0;
-    let skippedDuplicates = 0;
+    let skippedProtected = 0;
     let autoAssigned = 0;
     const errors: string[] = [];
 
-    // Pre-load existing FIR numbers to detect duplicates
-    const existingFirNos = new Set(
-      (db.prepare('SELECT fir_no FROM cases').all() as { fir_no: string }[]).map(r => r.fir_no.toUpperCase().trim())
-    );
+    // Pre-load existing FIR numbers with their status to handle overwrites
+    const existingCases = new Map<string, { id: string; status: string }>();
+    (db.prepare('SELECT id, fir_no, status FROM cases').all() as { id: string; fir_no: string; status: string }[]).forEach(r => {
+      existingCases.set(r.fir_no.toUpperCase().trim(), { id: r.id, status: r.status });
+    });
+
+    const updateCase = db.prepare(`
+      UPDATE cases SET bank_name = ?, date_and_time = ?, applicant = ?, purpose_of_loan = ?, finance_amount = ?,
+        customer_name = ?, address = ?, location = ?, contact_number = ?, executive_id = COALESCE(?, executive_id),
+        customer_category = ?, status = CASE WHEN ? IS NOT NULL THEN 'assigned' ELSE status END
+      WHERE id = ?
+    `);
 
     // Check if Excel has a STATUS column for selective allocation
     const hasStatusColumn = mappedCases.some(c => (c.allocation_status || '').trim() !== '');
@@ -172,11 +181,15 @@ export async function POST(request: NextRequest) {
             continue;
           }
 
-          // Skip duplicate FIR numbers
+          // Check if FIR already exists — overwrite unless submitted/approved
           const firKey = (c.fir_no || '').toUpperCase().trim();
-          if (firKey && existingFirNos.has(firKey)) {
-            skippedDuplicates++;
-            continue;
+          const existingCase = firKey ? existingCases.get(firKey) : null;
+          if (existingCase) {
+            // Protect cases that are submitted (Maker) or approved (Checker)
+            if (existingCase.status === 'submitted' || existingCase.status === 'approved') {
+              skippedProtected++;
+              continue;
+            }
           }
 
           // Find executive by name (fuzzy match)
@@ -240,43 +253,74 @@ export async function POST(request: NextRequest) {
           if (category === 'BVR' || category === 'BUSINESS') category = 'OFFICE';
           if (!['HOME', 'OFFICE', 'OTHER'].includes(category)) category = 'HOME';
 
-          const caseId = generateId('CASE');
+          if (existingCase) {
+            // UPDATE existing case with new data
+            updateCase.run(
+              c.bank_name || 'Unknown',
+              c.date_and_time || null,
+              c.applicant || '',
+              c.purpose_of_loan || '',
+              c.finance_amount || '',
+              c.customer_name || 'Unknown',
+              c.address || '',
+              c.location || '',
+              c.contact_number || '',
+              execId,       // COALESCE(?, executive_id) — keeps old exec if new is null
+              category,
+              execId,       // For CASE WHEN ? IS NOT NULL — sets status to 'assigned' if exec provided
+              existingCase.id,
+            );
 
-          insert.run(
-            caseId,
-            c.bank_name || 'Unknown',
-            c.date_and_time || null,
-            c.fir_no || `FIR-${Date.now()}-${i}`,
-            c.applicant || '',
-            c.purpose_of_loan || '',
-            c.finance_amount || '',
-            c.customer_name || 'Unknown',
-            c.address || '',
-            c.location || '',
-            c.contact_number || '',
-            execId,
-            category,
-            execId ? 'assigned' : 'unassigned',
-            batchId,
-          );
-
-          // Log audit if auto-assigned
-          if (execId) {
-            const execName = allExecs.find(e => e.id === execId)?.name || 'Unknown';
-            const assignMethod = !hasExecColumn ? 'round-robin distribution' : 'Excel data';
+            // Log audit for overwrite
             auditInsert.run(
               generateId('AUD'),
-              caseId,
-              'Case Auto-Assigned',
+              existingCase.id,
+              'Case Updated (Excel Overwrite)',
               'System (Excel Import)',
-              `Case auto-assigned to ${execName} based on ${assignMethod}`
+              `Case data overwritten from re-uploaded Excel${execId ? ` — reassigned to ${allExecs.find(e => e.id === execId)?.name || 'Unknown'}` : ''}`
             );
+
+            updated++;
+          } else {
+            // INSERT new case
+            const caseId = generateId('CASE');
+
+            insert.run(
+              caseId,
+              c.bank_name || 'Unknown',
+              c.date_and_time || null,
+              c.fir_no || `FIR-${Date.now()}-${i}`,
+              c.applicant || '',
+              c.purpose_of_loan || '',
+              c.finance_amount || '',
+              c.customer_name || 'Unknown',
+              c.address || '',
+              c.location || '',
+              c.contact_number || '',
+              execId,
+              category,
+              execId ? 'assigned' : 'unassigned',
+              batchId,
+            );
+
+            // Log audit if auto-assigned
+            if (execId) {
+              const execName = allExecs.find(e => e.id === execId)?.name || 'Unknown';
+              const assignMethod = !hasExecColumn ? 'round-robin distribution' : 'Excel data';
+              auditInsert.run(
+                generateId('AUD'),
+                caseId,
+                'Case Auto-Assigned',
+                'System (Excel Import)',
+                `Case auto-assigned to ${execName} based on ${assignMethod}`
+              );
+            }
+
+            // Track this FIR to catch duplicates within the same file
+            if (firKey) existingCases.set(firKey, { id: caseId, status: 'unassigned' });
+
+            imported++;
           }
-
-          // Track this FIR to catch duplicates within the same file
-          if (firKey) existingFirNos.add(firKey);
-
-          imported++;
         } catch (e) {
           errors.push(`Row ${i + 2}: ${(e as Error).message}`);
           failed++;
@@ -317,8 +361,9 @@ export async function POST(request: NextRequest) {
       filename: file.name,
       total: rawData.length,
       imported,
+      updated,
       failed,
-      skippedDuplicates,
+      skippedProtected,
       autoAssigned,
       holdCount,
       errors: errors.slice(0, 10),

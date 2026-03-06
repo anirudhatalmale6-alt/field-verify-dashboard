@@ -10,7 +10,7 @@ export default function UploadPage() {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<{ imported: number; failed: number; skippedDuplicates?: number; total: number; errors?: string[]; detectedColumns?: string[]; matchedFields?: string[]; unmatchedColumns?: string[] } | null>(null);
+  const [result, setResult] = useState<{ imported: number; updated?: number; failed: number; skippedProtected?: number; total: number; errors?: string[]; detectedColumns?: string[]; matchedFields?: string[]; unmatchedColumns?: string[] } | null>(null);
   const [error, setError] = useState('');
 
   const handleFile = (file: File) => {
@@ -122,10 +122,16 @@ export default function UploadPage() {
                   <p className="text-2xl font-bold text-emerald-600">{result.imported}</p>
                   <p className="text-xs text-slate-500">Imported</p>
                 </div>
-                {(result.skippedDuplicates || 0) > 0 && (
+                {(result.updated || 0) > 0 && (
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-amber-600">{result.skippedDuplicates}</p>
-                    <p className="text-xs text-slate-500">Duplicates Skipped</p>
+                    <p className="text-2xl font-bold text-blue-600">{result.updated}</p>
+                    <p className="text-xs text-slate-500">Updated</p>
+                  </div>
+                )}
+                {(result.skippedProtected || 0) > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-amber-600">{result.skippedProtected}</p>
+                    <p className="text-xs text-slate-500">Skipped (Submitted)</p>
                   </div>
                 )}
                 {result.failed > 0 && (
@@ -187,7 +193,8 @@ export default function UploadPage() {
               <p>&bull; CUSTOMER CATEGORY: HOME, OFFICE, or OTHER</p>
               <p>&bull; If executive is specified, case is auto-assigned</p>
               <p>&bull; If executive is blank, case is marked &quot;Unassigned&quot;</p>
-              <p>&bull; Duplicate FIR numbers are automatically skipped</p>
+              <p>&bull; Duplicate FIR numbers are overwritten with new data</p>
+              <p>&bull; Submitted/Approved cases are protected (not overwritten)</p>
             </div>
           </div>
         </div>
