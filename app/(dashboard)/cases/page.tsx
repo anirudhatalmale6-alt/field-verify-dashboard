@@ -231,6 +231,7 @@ export default function CasesPage() {
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Category</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Executive</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Status</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -265,6 +266,16 @@ export default function CasesPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span className={`status-badge ${getStatusColor(c.status)}`}>{getStatusLabel(c.status)}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {(c.status === 'assigned' || c.status === 'unassigned' || c.status === 'in_progress') && (
+                      <Link href={`/admin-submit/${c.id}`} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-[10px] font-semibold text-teal-700 hover:bg-teal-100 transition-colors whitespace-nowrap">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                        </svg>
+                        Submit Report
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}
