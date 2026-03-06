@@ -24,7 +24,6 @@ interface CaseRow {
 export default function ExecCasesPage() {
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
-  // Default to "assigned" so submitted cases are hidden by default
   const [filter, setFilter] = useState('assigned');
   const [search, setSearch] = useState('');
 
@@ -37,10 +36,8 @@ export default function ExecCasesPage() {
   const fetchCases = useCallback(async () => {
     setLoading(true);
     try {
-      // "todo" filter fetches both assigned and in_progress
       let data;
       if (filter === 'assigned') {
-        // Fetch assigned + in_progress separately and merge
         const [assignedData, inProgressData] = await Promise.all([
           getCases({ status: 'assigned' }),
           getCases({ status: 'in_progress' }),
@@ -83,7 +80,6 @@ export default function ExecCasesPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Push-back failed');
-      // Remove the case from the local list immediately
       setCases(prev => prev.filter(c => c.id !== pushbackCaseId));
       closePushbackModal();
     } catch (err: unknown) {
@@ -106,6 +102,14 @@ export default function ExecCasesPage() {
     setPushbackError('');
   };
 
+  // Open Google Maps directions from current location to the case address
+  const openMaps = (e: React.MouseEvent, address: string, location: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const dest = encodeURIComponent((address + (location ? ', ' + location : '')).trim());
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}`, '_blank');
+  };
+
   return (
     <div className="px-4 py-4">
       {/* Stats */}
@@ -124,7 +128,7 @@ export default function ExecCasesPage() {
         </div>
       </div>
 
-      {/* Filter Tabs — "To Do" is default active */}
+      {/* Filter Tabs */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {[
           { key: 'assigned', label: 'To Do' },
@@ -226,7 +230,7 @@ export default function ExecCasesPage() {
                       </span>
                     </div>
 
-                    {/* Address — prominent as client requested */}
+                    {/* Address */}
                     <div className="flex items-start gap-2 mb-2">
                       <svg className="flex-shrink-0 mt-0.5 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
@@ -255,9 +259,9 @@ export default function ExecCasesPage() {
                       </span>
                     </div>
 
-                    {/* Contact — Click-to-Call */}
-                    {c.contact_number && (
-                      <div className="flex items-center gap-2 mt-2">
+                    {/* Contact + Navigate buttons */}
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      {c.contact_number && (
                         <a
                           href={`tel:${c.contact_number.replace(/\s+/g, '')}`}
                           onClick={(e) => e.stopPropagation()}
@@ -268,13 +272,24 @@ export default function ExecCasesPage() {
                           </svg>
                           <span className="text-xs font-medium text-emerald-700">{c.contact_number}</span>
                         </a>
-                      </div>
-                    )}
+                      )}
+                      {/* Google Maps Navigate */}
+                      {(c.address || c.location) && (
+                        <button
+                          onClick={(e) => openMaps(e, c.address, c.location)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 active:bg-blue-100 transition-colors"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="3 11 22 2 13 21 11 13 3 11" />
+                          </svg>
+                          <span className="text-xs font-medium text-blue-700">Navigate</span>
+                        </button>
+                      )}
+                    </div>
 
                     {/* CTA for assigned / in_progress cases */}
                     {(c.status === 'assigned' || c.status === 'in_progress') && (
                       <div className="mt-3 pt-3 border-t border-slate-100 flex gap-2">
-                        {/* Start Verification button */}
                         <span className="flex items-center justify-center gap-2 flex-1 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-lg">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
@@ -287,7 +302,7 @@ export default function ExecCasesPage() {
                 </div>
               </Link>
 
-              {/* Push Back button — only for assigned cases, rendered outside the Link to avoid navigation */}
+              {/* Push Back button */}
               {c.status === 'assigned' && (
                 <div className="px-4 pb-3 -mt-1 bg-white rounded-b-xl border border-t-0 border-amber-200 shadow-sm">
                   <button
@@ -319,14 +334,11 @@ export default function ExecCasesPage() {
       {/* Push-Back Modal */}
       {pushbackCaseId && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-          {/* Overlay */}
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={closePushbackModal}
           />
-          {/* Modal Content */}
           <div className="relative w-full max-w-md mx-4 mb-4 sm:mb-0 bg-white rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom">
-            {/* Header */}
             <div className="bg-red-50 px-5 py-4 border-b border-red-100">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -341,7 +353,6 @@ export default function ExecCasesPage() {
               </div>
             </div>
 
-            {/* Body */}
             <div className="px-5 py-4">
               <label className="block text-sm font-semibold text-navy-900 mb-2">
                 Reason for push-back <span className="text-red-500">*</span>
@@ -359,7 +370,6 @@ export default function ExecCasesPage() {
               )}
             </div>
 
-            {/* Actions */}
             <div className="px-5 pb-5 flex gap-3">
               <button
                 onClick={closePushbackModal}

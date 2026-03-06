@@ -13,6 +13,17 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
   const [locError, setLocError] = useState('');
   const watchRef = useRef<number | null>(null);
 
+  // Force redirect to HTTPS domain if accessed via HTTP or IP
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const { protocol, hostname } = window.location;
+      if (protocol === 'http:' || /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+        window.location.href = 'https://app.kospl.in' + window.location.pathname;
+        return;
+      }
+    }
+  }, []);
+
   useEffect(() => {
     getMe()
       .then(data => {
