@@ -76,11 +76,8 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
           setLocStatus('active');
           reportLocation(pos.coords.latitude, pos.coords.longitude).catch(() => {});
         },
-        (err) => {
-          if (err.code === 1) {
-            setLocStatus('denied');
-            alert('Please enable location access:\n\n1. Tap the lock/info icon in the address bar\n2. Allow Location\n3. Reload the page');
-          }
+        () => {
+          setLocStatus('denied');
         },
         { enableHighAccuracy: true, timeout: 15000 }
       );
