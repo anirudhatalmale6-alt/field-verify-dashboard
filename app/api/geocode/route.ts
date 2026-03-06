@@ -6,6 +6,11 @@ import { getAuthUser } from '@/lib/auth';
 function cleanAddress(raw: string): string {
   let addr = raw;
 
+  // Add spaces before 6-digit pin codes that are concatenated to text (e.g., "Maharashtra412105" → "Maharashtra 412105")
+  addr = addr.replace(/([a-zA-Z])(\d{6})/, '$1 $2');
+  // Add spaces after pin codes before text
+  addr = addr.replace(/(\d{6})([a-zA-Z])/, '$1 $2');
+
   // Add spaces before uppercase words that follow lowercase letters (e.g., "chinchwadPune" → "chinchwad Pune")
   addr = addr.replace(/([a-z])([A-Z])/g, '$1 $2');
 
@@ -17,7 +22,7 @@ function cleanAddress(raw: string): string {
   }
 
   // Add spaces before common city names that are concatenated
-  const cities = ['Pune', 'Mumbai', 'Chinchwad', 'Pimpri', 'Hadapsar', 'Bandra', 'Thane', 'Nashik', 'Nagpur', 'Aurangabad', 'Solapur', 'Kolhapur', 'Bhiwandi', 'Vasai'];
+  const cities = ['Pune', 'Mumbai', 'Chinchwad', 'Pimpri', 'Hadapsar', 'Bandra', 'Thane', 'Nashik', 'Nagpur', 'Aurangabad', 'Solapur', 'Kolhapur', 'Bhiwandi', 'Vasai', 'Shirur', 'Alandi', 'Kalbhor', 'Manjari', 'Lonavala', 'Khandala'];
   for (const city of cities) {
     const re = new RegExp(`([a-z0-9])${city}`, 'gi');
     addr = addr.replace(re, `$1 ${city}`);
@@ -29,10 +34,15 @@ function cleanAddress(raw: string): string {
   return addr;
 }
 
-// Extract Indian pin code from address
+// Extract Indian pin code from address (handles concatenated text like "Maharashtra412105")
 function extractPinCode(addr: string): string | null {
-  const match = addr.match(/\b[1-9]\d{5}\b/);
-  return match ? match[0] : null;
+  // First try with word boundary
+  const match1 = addr.match(/\b[1-9]\d{5}\b/);
+  if (match1) return match1[0];
+  // Fallback: look for 6-digit number after letters
+  const match2 = addr.match(/[a-zA-Z]([1-9]\d{5})/);
+  if (match2) return match2[1];
+  return null;
 }
 
 async function geocodeQuery(query: string): Promise<{ lat: number; lng: number; type: string } | null> {
