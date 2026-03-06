@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
 
 // POST /api/geocode — batch geocode cases that don't have coordinates yet
 // Called automatically when executive opens their cases list
-export async function POST(_request: NextRequest) {
+export async function POST() {
   try {
     const user = await getAuthUser();
     if (!user) {
