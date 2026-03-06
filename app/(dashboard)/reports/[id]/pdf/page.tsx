@@ -138,7 +138,27 @@ export default function PDFPreviewPage() {
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           section { break-inside: avoid; }
         }
+        .pdf-watermark {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-35deg);
+          font-size: 48px;
+          font-weight: 900;
+          color: rgba(0, 0, 0, 0.04);
+          white-space: nowrap;
+          pointer-events: none;
+          z-index: 0;
+          letter-spacing: 4px;
+          text-transform: uppercase;
+        }
+        @media print {
+          .pdf-watermark {
+            color: rgba(0, 0, 0, 0.06);
+          }
+        }
       `}</style>
+      <div className="pdf-watermark">Koteshwari Onfield Services Pvt Ltd</div>
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-6 print:hidden">
         <div className="flex items-center gap-2 text-xs text-slate-400">

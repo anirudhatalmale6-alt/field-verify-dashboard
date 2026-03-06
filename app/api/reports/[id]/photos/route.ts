@@ -3,6 +3,51 @@ import { getDb, generateId } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import piexif from 'piexifjs';
+
+// Convert decimal degrees to EXIF GPS format (degrees, minutes, seconds as rationals)
+function decimalToDMS(dd: number): [[number, number], [number, number], [number, number]] {
+  const abs = Math.abs(dd);
+  const deg = Math.floor(abs);
+  const minFloat = (abs - deg) * 60;
+  const min = Math.floor(minFloat);
+  const sec = Math.round((minFloat - min) * 60 * 100); // * 100 for 2 decimal precision
+  return [[deg, 1], [min, 1], [sec, 100]];
+}
+
+// Embed GPS coordinates into JPEG EXIF data
+function embedGpsExif(buffer: Buffer, lat: number, lng: number): Buffer {
+  try {
+    const base64 = buffer.toString('binary');
+    const data = `data:image/jpeg;base64,${Buffer.from(base64, 'binary').toString('base64')}`;
+
+    const gpsIfd: Record<string, unknown> = {
+      [piexif.GPSIFD.GPSLatitudeRef]: lat >= 0 ? 'N' : 'S',
+      [piexif.GPSIFD.GPSLatitude]: decimalToDMS(lat),
+      [piexif.GPSIFD.GPSLongitudeRef]: lng >= 0 ? 'E' : 'W',
+      [piexif.GPSIFD.GPSLongitude]: decimalToDMS(lng),
+      [piexif.GPSIFD.GPSAltitudeRef]: 0,
+      [piexif.GPSIFD.GPSAltitude]: [0, 1],
+    };
+
+    const now = new Date();
+    const dateStamp = `${now.getFullYear()}:${String(now.getMonth() + 1).padStart(2, '0')}:${String(now.getDate()).padStart(2, '0')}`;
+    const timeStamp = [[now.getHours(), 1], [now.getMinutes(), 1], [now.getSeconds(), 1]] as [[number, number], [number, number], [number, number]];
+    gpsIfd[piexif.GPSIFD.GPSDateStamp] = dateStamp;
+    gpsIfd[piexif.GPSIFD.GPSTimeStamp] = timeStamp;
+
+    const exifObj = { GPS: gpsIfd };
+    const exifBytes = piexif.dump(exifObj);
+    const newData = piexif.insert(exifBytes, data);
+
+    // Convert data URI back to Buffer
+    const base64Data = newData.split(',')[1];
+    return Buffer.from(base64Data, 'base64');
+  } catch (err) {
+    console.error('EXIF embed error (non-fatal):', err);
+    return buffer; // Return original if EXIF embedding fails
+  }
+}
 
 // POST /api/reports/[id]/photos — upload photos for a report
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -48,13 +93,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       const ext = file.name.split('.').pop() || 'jpg';
       const filename = `${photoId}.${ext}`;
 
+      let buffer: Buffer = Buffer.from(await file.arrayBuffer()) as Buffer;
+
+      // Embed GPS EXIF data into JPEG photos
+      const lat = latitudes[i] ? parseFloat(latitudes[i]) : null;
+      const lng = longitudes[i] ? parseFloat(longitudes[i]) : null;
+      if (lat && lat !== 0 && lng && lng !== 0 && (ext === 'jpg' || ext === 'jpeg')) {
+        buffer = embedGpsExif(buffer, lat, lng) as Buffer;
+      }
+
       // Save file
-      const buffer = Buffer.from(await file.arrayBuffer());
       await writeFile(path.join(uploadDir, filename), buffer);
 
       // Save to DB
-      const lat = latitudes[i] ? parseFloat(latitudes[i]) : null;
-      const lng = longitudes[i] ? parseFloat(longitudes[i]) : null;
       insertPhoto.run(
         photoId,
         id,

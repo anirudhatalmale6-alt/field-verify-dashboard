@@ -318,28 +318,97 @@ export default function VerificationFormPage() {
     }));
   };
 
+  // Stamp GPS coordinates + timestamp on photo using canvas
+  const stampPhoto = (file: File, lat: number | null, lng: number | null): Promise<{ stampedFile: File; preview: string }> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
+
+        // Stamp bar at bottom
+        const barHeight = Math.max(img.height * 0.06, 50);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.fillRect(0, img.height - barHeight, img.width, barHeight);
+
+        const fontSize = Math.max(barHeight * 0.32, 14);
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textBaseline = 'middle';
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        const timestamp = `${dateStr} ${timeStr}`;
+
+        const pad = fontSize * 0.5;
+        const lineY1 = img.height - barHeight * 0.62;
+        const lineY2 = img.height - barHeight * 0.28;
+
+        ctx.fillText(timestamp, pad, lineY1);
+
+        if (lat !== null && lng !== null) {
+          const gpsText = `GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          ctx.fillText(gpsText, pad, lineY2);
+
+          // KOSPL branding on right
+          ctx.textAlign = 'right';
+          ctx.font = `${fontSize * 0.8}px sans-serif`;
+          ctx.fillStyle = 'rgba(255,255,255,0.7)';
+          ctx.fillText('KOSPL Field Verify', img.width - pad, lineY2);
+          ctx.textAlign = 'left';
+        } else {
+          ctx.fillStyle = '#FF6B6B';
+          ctx.fillText('GPS: Not Available', pad, lineY2);
+        }
+
+        canvas.toBlob((blob) => {
+          URL.revokeObjectURL(url);
+          if (blob) {
+            const stampedFile = new File([blob], file.name, { type: 'image/jpeg' });
+            const preview = URL.createObjectURL(blob);
+            resolve({ stampedFile, preview });
+          } else {
+            resolve({ stampedFile: file, preview: URL.createObjectURL(file) });
+          }
+        }, 'image/jpeg', 0.9);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve({ stampedFile: file, preview: URL.createObjectURL(file) });
+      };
+      img.src = url;
+    });
+  };
+
   const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    // Try to get fresh GPS at capture time
-    const captureWithGps = (lat: number | null, lng: number | null) => {
-      const newPhotos: PhotoItem[] = Array.from(files).map((file, i) => ({
-        file,
-        preview: URL.createObjectURL(file),
-        label: `Photo ${photos.length + i + 1}`,
-        lat,
-        lng,
-      }));
-      setPhotos(prev => [...prev, ...newPhotos]);
+    const captureWithGps = async (lat: number | null, lng: number | null) => {
+      const fileArr = Array.from(files);
+      const stampedPhotos: PhotoItem[] = [];
+      for (let i = 0; i < fileArr.length; i++) {
+        const { stampedFile, preview } = await stampPhoto(fileArr[i], lat, lng);
+        stampedPhotos.push({
+          file: stampedFile,
+          preview,
+          label: `Photo ${photos.length + i + 1}`,
+          lat,
+          lng,
+        });
+      }
+      setPhotos(prev => [...prev, ...stampedPhotos]);
       e.target.value = '';
     };
 
     if (currentCoords) {
-      // We already have GPS coords from watchPosition
       captureWithGps(currentCoords.lat, currentCoords.lng);
     } else if (navigator.geolocation) {
-      // Try one-shot getCurrentPosition as fallback
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
@@ -348,7 +417,6 @@ export default function VerificationFormPage() {
           captureWithGps(latitude, longitude);
         },
         () => {
-          // GPS failed, capture without coords
           captureWithGps(null, null);
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 30000 }

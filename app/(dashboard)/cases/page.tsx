@@ -98,10 +98,29 @@ export default function CasesPage() {
   const handleAssign = async (execId: string) => {
     setAssigning(true);
     try {
-      await assignCases(selectedCases, execId);
+      const result = await assignCases(selectedCases, execId);
       setShowAssignModal(false);
       setSelectedCases([]);
       loadCases(); // Refresh
+
+      // Build WhatsApp message with case details
+      if (result.phone && result.cases && result.cases.length > 0) {
+        const lines = [`*KOSPL Field Verification - New Assignment*\n\nDear ${result.executive},\n\nYou have been assigned ${result.cases.length} new case(s):\n`];
+        for (const c of result.cases) {
+          lines.push(`*FIR:* ${c.fir_no}`);
+          lines.push(`*Customer:* ${c.customer_name}`);
+          lines.push(`*Address:* ${c.address}`);
+          lines.push(`*Contact:* ${c.contact_number}`);
+          lines.push(`*Category:* ${c.customer_category}`);
+          lines.push(`*Bank:* ${c.bank_name}\n`);
+        }
+        lines.push('Please complete the verification at the earliest. Login to your app to view full details.');
+        const phone = result.phone.replace(/[\s\-\+]/g, '');
+        const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`;
+        if (confirm(`Cases assigned to ${result.executive}! Send WhatsApp notification?`)) {
+          window.open(waUrl, '_blank');
+        }
+      }
     } catch (err) {
       alert('Failed to assign: ' + (err as Error).message);
     } finally {

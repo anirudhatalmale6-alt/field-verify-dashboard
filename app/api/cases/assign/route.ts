@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const db = getDb();
 
     // Verify executive exists
-    const exec = db.prepare('SELECT id, name FROM users WHERE id = ? AND role = ?').get(executive_id, 'executive') as { id: string; name: string } | undefined;
+    const exec = db.prepare('SELECT id, name, phone FROM users WHERE id = ? AND role = ?').get(executive_id, 'executive') as { id: string; name: string; phone: string | null } | undefined;
     if (!exec) {
       return NextResponse.json({ error: 'Executive not found' }, { status: 404 });
     }
@@ -50,7 +50,15 @@ export async function POST(request: NextRequest) {
 
     const assigned = assign(case_ids);
 
-    return NextResponse.json({ assigned, executive: exec.name });
+    // Fetch assigned case details for WhatsApp notification
+    const assignedCases = case_ids.map((cId: string) => {
+      const c = db.prepare('SELECT customer_name, address, contact_number, customer_category, fir_no, bank_name FROM cases WHERE id = ?').get(cId) as {
+        customer_name: string; address: string; contact_number: string; customer_category: string; fir_no: string; bank_name: string;
+      } | undefined;
+      return c ? { fir_no: c.fir_no, customer_name: c.customer_name, address: c.address, contact_number: c.contact_number, customer_category: c.customer_category, bank_name: c.bank_name } : null;
+    }).filter(Boolean);
+
+    return NextResponse.json({ assigned, executive: exec.name, phone: exec.phone, cases: assignedCases });
   } catch (error) {
     console.error('Assign error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
