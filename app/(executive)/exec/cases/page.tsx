@@ -26,6 +26,7 @@ export default function ExecCasesPage() {
   const [loading, setLoading] = useState(true);
   // Default to "assigned" so submitted cases are hidden by default
   const [filter, setFilter] = useState('assigned');
+  const [search, setSearch] = useState('');
 
   // Push-back modal state
   const [pushbackCaseId, setPushbackCaseId] = useState<string | null>(null);
@@ -145,6 +146,27 @@ export default function ExecCasesPage() {
         ))}
       </div>
 
+      {/* Search */}
+      <div className="relative mb-4">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="text"
+          placeholder="Search by name, phone, address, FIR..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+        />
+        {search && (
+          <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 active:text-slate-600">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        )}
+      </div>
+
       {/* Loading */}
       {loading && (
         <div className="text-center py-12">
@@ -156,9 +178,20 @@ export default function ExecCasesPage() {
       )}
 
       {/* Case Cards */}
-      {!loading && (
+      {!loading && (() => {
+        const q = search.toLowerCase().trim();
+        const filteredCases = q ? cases.filter(c =>
+          c.customer_name.toLowerCase().includes(q) ||
+          c.contact_number.toLowerCase().includes(q) ||
+          c.address.toLowerCase().includes(q) ||
+          c.location.toLowerCase().includes(q) ||
+          c.fir_no.toLowerCase().includes(q) ||
+          c.bank_name.toLowerCase().includes(q) ||
+          (c.applicant && c.applicant.toLowerCase().includes(q))
+        ) : cases;
+        return (
         <div className="space-y-3">
-          {cases.map(c => (
+          {filteredCases.map(c => (
             <div key={c.id}>
               <Link
                 href={c.status === 'assigned' || c.status === 'in_progress' ? `/exec/report/${c.id}` : '#'}
@@ -271,16 +304,17 @@ export default function ExecCasesPage() {
             </div>
           ))}
 
-          {cases.length === 0 && (
+          {filteredCases.length === 0 && (
             <div className="text-center py-12">
               <svg className="mx-auto mb-3 text-slate-300" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="8" x2="21" y2="8" />
               </svg>
-              <p className="text-sm text-slate-500">No cases found</p>
+              <p className="text-sm text-slate-500">{search ? 'No matching cases found' : 'No cases found'}</p>
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
 
       {/* Push-Back Modal */}
       {pushbackCaseId && (

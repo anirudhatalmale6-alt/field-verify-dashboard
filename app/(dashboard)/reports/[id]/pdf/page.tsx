@@ -124,6 +124,19 @@ export default function PDFPreviewPage() {
     );
   }
 
+  if (report.status !== 'approved') {
+    return (
+      <div className="p-8 text-center">
+        <svg className="mx-auto mb-3 text-slate-300" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+        </svg>
+        <h2 className="text-xl font-display font-bold text-navy-900 mb-2">PDF Not Available</h2>
+        <p className="text-sm text-slate-500 mb-4">PDF export is only available after the report has been Submitted by Checker.</p>
+        <Link href={`/reports/${report.id}`} className="text-sm text-teal-600 hover:underline">Back to Report</Link>
+      </div>
+    );
+  }
+
   const typeOfHouse = (() => {
     try { return JSON.parse(report.type_of_house || '[]'); } catch { return []; }
   })();
