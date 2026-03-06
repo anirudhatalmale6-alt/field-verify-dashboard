@@ -15,6 +15,7 @@ export async function GET() {
     const totalCases = (db.prepare('SELECT COUNT(*) as count FROM cases').get() as { count: number }).count;
     const totalReports = (db.prepare('SELECT COUNT(*) as count FROM reports').get() as { count: number }).count;
     const pendingReview = (db.prepare("SELECT COUNT(*) as count FROM reports WHERE status IN ('pending', 'in_review')").get() as { count: number }).count;
+    const submittedByMaker = (db.prepare("SELECT COUNT(*) as count FROM reports WHERE status = 'verified'").get() as { count: number }).count;
     const approved = (db.prepare("SELECT COUNT(*) as count FROM reports WHERE status = 'approved'").get() as { count: number }).count;
     const rejected = (db.prepare("SELECT COUNT(*) as count FROM reports WHERE status = 'rejected'").get() as { count: number }).count;
 
@@ -77,10 +78,11 @@ export async function GET() {
         totalCases,
         totalReports,
         pendingReview,
+        submittedByMaker,
         approved,
         rejected,
         todayReports,
-        avgTAT: 4.5, // Will be calculated from real data once there are enough reports
+        avgTAT: 4.5,
       },
       weeklyData: weeklyData.length > 0 ? weeklyData : [
         { day: 'Mon', visits: 0, approved: 0, rejected: 0 },
