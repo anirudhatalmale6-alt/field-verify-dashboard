@@ -10,12 +10,12 @@ export default function UploadPage() {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<{ imported: number; failed: number; total: number; errors?: string[] } | null>(null);
+  const [result, setResult] = useState<{ imported: number; failed: number; skippedDuplicates?: number; total: number; errors?: string[]; detectedColumns?: string[]; matchedFields?: string[]; unmatchedColumns?: string[] } | null>(null);
   const [error, setError] = useState('');
 
   const handleFile = (file: File) => {
-    if (!file.name.match(/\.(xlsx|xls)$/i)) {
-      setError('Please upload an Excel file (.xlsx or .xls)');
+    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
+      setError('Please upload an Excel file (.xlsx, .xls, or .csv)');
       return;
     }
     setSelectedFile(file);
@@ -67,7 +67,7 @@ export default function UploadPage() {
                   'border-slate-200 hover:border-slate-300 bg-white'
                 }`}
               >
-                <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+                <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
                 {selectedFile ? (
                   <>
                     <div className="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -122,6 +122,12 @@ export default function UploadPage() {
                   <p className="text-2xl font-bold text-emerald-600">{result.imported}</p>
                   <p className="text-xs text-slate-500">Imported</p>
                 </div>
+                {(result.skippedDuplicates || 0) > 0 && (
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-amber-600">{result.skippedDuplicates}</p>
+                    <p className="text-xs text-slate-500">Duplicates Skipped</p>
+                  </div>
+                )}
                 {result.failed > 0 && (
                   <div className="text-center">
                     <p className="text-2xl font-bold text-red-600">{result.failed}</p>
@@ -137,6 +143,12 @@ export default function UploadPage() {
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-left">
                   <p className="text-xs font-semibold text-red-700 mb-1">Errors:</p>
                   {result.errors.map((err, i) => <p key={i} className="text-xs text-red-600">{err}</p>)}
+                </div>
+              )}
+              {result.unmatchedColumns && result.unmatchedColumns.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-left">
+                  <p className="text-xs font-semibold text-amber-700 mb-1">Unrecognized columns (ignored):</p>
+                  <p className="text-xs text-amber-600">{result.unmatchedColumns.join(', ')}</p>
                 </div>
               )}
               <div className="flex gap-3 justify-center">
@@ -175,6 +187,7 @@ export default function UploadPage() {
               <p>&bull; CUSTOMER CATEGORY: HOME, OFFICE, or OTHER</p>
               <p>&bull; If executive is specified, case is auto-assigned</p>
               <p>&bull; If executive is blank, case is marked &quot;Unassigned&quot;</p>
+              <p>&bull; Duplicate FIR numbers are automatically skipped</p>
             </div>
           </div>
         </div>

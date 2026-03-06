@@ -53,14 +53,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       await writeFile(path.join(uploadDir, filename), buffer);
 
       // Save to DB
+      const lat = latitudes[i] ? parseFloat(latitudes[i]) : null;
+      const lng = longitudes[i] ? parseFloat(longitudes[i]) : null;
       insertPhoto.run(
         photoId,
         id,
         filename,
         file.name,
         labels[i] || `Photo ${i + 1}`,
-        latitudes[i] ? parseFloat(latitudes[i]) : null,
-        longitudes[i] ? parseFloat(longitudes[i]) : null,
+        (lat && lat !== 0) ? lat : null,
+        (lng && lng !== 0) ? lng : null,
       );
 
       uploaded.push({ id: photoId, filename, label: labels[i] || `Photo ${i + 1}` });

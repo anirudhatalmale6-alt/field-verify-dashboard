@@ -20,10 +20,10 @@ export function getStatusLabel(status: string): string {
     case 'in_progress': return 'In Progress';
     case 'pending': return 'Pending Review';
     case 'in_review': return 'In Review';
-    case 'verified': return 'Verified';
-    case 'approved': return 'Approved';
+    case 'verified': return 'Submitted by Maker';
+    case 'approved': return 'Submitted by Checker';
     case 'rejected': return 'Rejected';
-    case 'submitted': return 'Submitted';
+    case 'submitted': return 'Submitted by Maker';
     default: return status;
   }
 }

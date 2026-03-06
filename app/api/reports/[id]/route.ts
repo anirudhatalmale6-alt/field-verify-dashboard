@@ -93,6 +93,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         .run(generateId('AUD'), id, 'Status Changed', user.name, `Status changed to ${body.status}`, existing.status, body.status);
     }
 
+    // Update summary remarks
+    if (typeof body.summary_remarks === 'string') {
+      db.prepare(`UPDATE reports SET summary_remarks = ?, updated_at = datetime('now') WHERE id = ?`).run(body.summary_remarks, id);
+
+      db.prepare(`INSERT INTO audit_trail (id, report_id, action, performed_by, details) VALUES (?, ?, ?, ?, ?)`)
+        .run(generateId('AUD'), id, 'Summary Remarks Updated', user.name, 'Summary remarks edited by admin');
+    }
+
+    // Update verification result
+    if (typeof body.verification_result === 'string') {
+      db.prepare(`UPDATE reports SET verification_result = ?, updated_at = datetime('now') WHERE id = ?`).run(body.verification_result, id);
+
+      db.prepare(`INSERT INTO audit_trail (id, report_id, action, performed_by, details) VALUES (?, ?, ?, ?, ?)`)
+        .run(generateId('AUD'), id, 'Verification Result Updated', user.name, `Verification result set to: ${body.verification_result}`);
+    }
+
     // Add internal note
     if (body.internal_note) {
       const currentNotes = existing.internal_notes || '';

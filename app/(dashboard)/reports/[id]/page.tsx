@@ -15,7 +15,6 @@ interface ReportDetail {
   reviewed_at: string | null;
   approved_at: string | null;
   internal_notes: string | null;
-  fir_report_given_by: string;
   fir_reference_number: string;
   customer_name: string;
   address_confirmed: number;
@@ -54,6 +53,8 @@ interface ReportDetail {
   company_name_board: string;
   tpc_neighbour_name: string;
   special_remarks: string;
+  summary_remarks: string | null;
+  verification_result: string | null;
   bank_name: string;
   fir_no: string;
   applicant: string;
@@ -99,6 +100,10 @@ export default function ReportDetailPage() {
   const [internalNote, setInternalNote] = useState('');
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [editingSummary, setEditingSummary] = useState(false);
+  const [summaryText, setSummaryText] = useState('');
+  const [savingSummary, setSavingSummary] = useState(false);
+  const [savingResult, setSavingResult] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -125,6 +130,54 @@ export default function ReportDetailPage() {
       alert('Failed to update status: ' + (err as Error).message);
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const generateAutoSummary = (r: ReportDetail, houseTypes: string[]) => {
+    const s: string[] = [];
+    s.push(`Field verification was conducted for ${r.customer_name} (FIR Ref: ${r.fir_reference_number || r.fir_no}) at ${r.address || 'N/A'}, ${r.location || 'N/A'}, under ${r.bank_name} for ${r.purpose_of_loan} of amount ${r.finance_amount || 'N/A'}.`);
+    s.push(`The address was ${r.address_confirmed ? 'CONFIRMED' : 'NOT CONFIRMED'} during the visit. Person met at the premises: ${r.person_met || 'N/A'}. Landmark: ${r.landmark || 'N/A'}. Verification type: ${r.rvr_or_bvr || 'N/A'}.`);
+    if (r.contact_number) s.push(`Contact number: ${r.contact_number}.`);
+    if (r.latitude && r.longitude) s.push(`GPS coordinates captured: ${r.latitude.toFixed(6)}, ${r.longitude.toFixed(6)}.`);
+    if (r.rvr_or_bvr !== 'BVR') {
+      s.push(`The applicant's date of birth/age is ${r.dob_or_age || 'N/A'}. The house is located in ${r.area_of_house || 'N/A'} area, type: ${houseTypes.length > 0 ? houseTypes.join(', ') : 'N/A'}, area ${r.area_in_sqft || 'N/A'} sqft, ownership: ${r.ownership_details || 'N/A'}.`);
+      if (r.rented_owner_name) s.push(`Rented from: ${r.rented_owner_name}.`);
+      s.push(`Staying since ${r.staying_years || 'N/A'} years with ${r.family_members || 'N/A'} family members and ${r.earning_members || 'N/A'} earning members.`);
+      if (r.spouse_occupation) s.push(`Spouse occupation: ${r.spouse_occupation}${r.spouse_occupation_details ? ' (' + r.spouse_occupation_details + ')' : ''}.`);
+    }
+    if (r.customer_occ_category === 'SALARIED') {
+      s.push(`The customer is salaried, working at ${r.company_name || 'N/A'} (${r.company_address || 'N/A'}) as ${r.designation || 'N/A'} for ${r.years_working || 'N/A'} years. Office setup ${r.office_setup_seen === 'YES' ? 'was seen' : 'was not seen'}, employees seen: ${r.employees_seen || 'N/A'}.`);
+    } else if (r.customer_occ_category === 'BUSINESSMAN') {
+      s.push(`The customer is a businessman. Business: ${r.business_name_address || 'N/A'}, nature: ${r.nature_of_business || 'N/A'}, running for ${r.years_in_business || 'N/A'} years. Office ownership: ${r.office_ownership || 'N/A'}, location: ${r.office_location || 'N/A'}, area: ${r.office_area_sqft || 'N/A'} sqft. Office setup ${r.office_setup_seen === 'YES' ? 'was seen' : 'was not seen'}, employees seen: ${r.employees_seen || 'N/A'}, company name board: ${r.company_name_board || 'N/A'}.`);
+    }
+    s.push(`Third party confirmation (TPC) / Neighbour: ${r.tpc_neighbour_name || 'N/A'}.`);
+    if (r.special_remarks) s.push(`Special remarks by field executive: ${r.special_remarks}.`);
+    if (r.verification_result) s.push(`Verification result: ${r.verification_result}.`);
+    return s.join(' ');
+  };
+
+  const handleSaveSummary = async () => {
+    setSavingSummary(true);
+    try {
+      await updateReport(reportId, { summary_remarks: summaryText });
+      await fetchData();
+      setEditingSummary(false);
+    } catch (err) {
+      alert('Failed to save summary: ' + (err as Error).message);
+    } finally {
+      setSavingSummary(false);
+    }
+  };
+
+  const handleVerificationResult = async (value: string) => {
+    setSavingResult(true);
+    try {
+      await updateReport(reportId, { verification_result: value });
+      await fetchData();
+    } catch (err) {
+      alert('Failed to save: ' + (err as Error).message);
+    } finally {
+      setSavingResult(false);
     }
   };
 
@@ -189,11 +242,21 @@ export default function ReportDetailPage() {
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            FIR {report.fir_no} &middot; {report.bank_name} &middot; {report.purpose_of_loan} &middot; {report.finance_amount} &middot; Submitted {formatDate(report.submitted_at)}
+            FIR {report.fir_no} &middot; {report.bank_name} &middot; {report.purpose_of_loan} &middot; {report.finance_amount} &middot; Submitted by Maker {formatDate(report.submitted_at)}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          {report.status !== 'approved' && (
+            <button
+              onClick={() => handleStatusChange('approved')}
+              disabled={updating}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20,6 9,17 4,12" /></svg>
+              {updating ? 'Updating...' : 'Submitted by Checker'}
+            </button>
+          )}
           <div className="relative">
             <button
               onClick={() => setShowStatusMenu(!showStatusMenu)}
@@ -262,7 +325,6 @@ export default function ReportDetailPage() {
           <div className="lg:col-span-2 space-y-6">
             <FormSection title="Section 1: Initial Information" icon="clipboard">
               <div className="grid grid-cols-2 gap-4">
-                <InfoField label="FIR Report Given By" value={report.fir_report_given_by || 'N/A'} />
                 <InfoField label="FIR Reference Number" value={report.fir_reference_number || 'N/A'} />
                 <InfoField label="Name of Customer" value={report.customer_name} />
                 <InfoField
@@ -339,6 +401,12 @@ export default function ReportDetailPage() {
                   <InfoField label="Company Address" value={report.company_address || 'N/A'} />
                   <InfoField label="Designation" value={report.designation || 'N/A'} />
                   <InfoField label="Years Working" value={report.years_working || 'N/A'} />
+                  <InfoField
+                    label="Office Setup Seen"
+                    value={report.office_setup_seen || 'N/A'}
+                    valueColor={report.office_setup_seen === 'YES' ? 'text-emerald-600' : undefined}
+                  />
+                  <InfoField label="No. of Employees Seen" value={report.employees_seen || 'N/A'} />
                 </div>
               </FormSection>
             )}
@@ -350,26 +418,16 @@ export default function ReportDetailPage() {
                   <InfoField label="Office Ownership" value={report.office_ownership || 'N/A'} />
                   <InfoField label="Nature of Business" value={report.nature_of_business || 'N/A'} />
                   <InfoField label="Years in Business" value={report.years_in_business || 'N/A'} />
+                  <InfoField label="Office Location / Address" value={report.office_location || 'N/A'} />
+                  <InfoField label="Office Area (Sqft)" value={report.office_area_sqft || 'N/A'} />
+                  <InfoField
+                    label="Office Setup Seen"
+                    value={report.office_setup_seen || 'N/A'}
+                    valueColor={report.office_setup_seen === 'YES' ? 'text-emerald-600' : undefined}
+                  />
+                  <InfoField label="No. of Employees Seen" value={report.employees_seen || 'N/A'} />
+                  <InfoField label="Company Name Board" value={report.company_name_board || 'N/A'} />
                 </div>
-              </FormSection>
-            )}
-
-            <FormSection title="Office Verification Details" icon="building">
-              <div className="grid grid-cols-2 gap-4">
-                <InfoField label="Office Location / Address" value={report.office_location || 'N/A'} />
-                <InfoField label="Office Area (Sqft)" value={report.office_area_sqft || 'N/A'} />
-                <InfoField
-                  label="Office Setup Seen"
-                  value={report.office_setup_seen || 'N/A'}
-                  valueColor={report.office_setup_seen === 'YES' ? 'text-emerald-600' : undefined}
-                />
-                <InfoField label="No. of Employees Seen" value={report.employees_seen || 'N/A'} />
-              </div>
-            </FormSection>
-
-            {report.rvr_or_bvr === 'BVR' && (
-              <FormSection title="Section 8: Business Verification" icon="check">
-                <InfoField label="Company Name Board" value={report.company_name_board || 'N/A'} />
               </FormSection>
             )}
 
@@ -385,14 +443,99 @@ export default function ReportDetailPage() {
               </div>
             </FormSection>
 
+            <FormSection title="Summary Remarks" icon="message">
+              {editingSummary ? (
+                <div>
+                  <textarea
+                    value={summaryText}
+                    onChange={(e) => setSummaryText(e.target.value)}
+                    rows={8}
+                    className="w-full px-4 py-3 rounded-lg border border-teal-300 text-sm text-slate-700 leading-relaxed focus:outline-none focus:ring-2 focus:ring-teal-500 resize-vertical bg-white"
+                  />
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={handleSaveSummary}
+                      disabled={savingSummary}
+                      className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {savingSummary ? 'Saving...' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => setEditingSummary(false)}
+                      className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:border-slate-300 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => setSummaryText(generateAutoSummary(report, typeOfHouse))}
+                      className="px-4 py-2 bg-white border border-slate-200 text-slate-500 text-xs font-medium rounded-lg hover:border-slate-300 transition-colors ml-auto"
+                    >
+                      Reset to Auto-Generated
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
+                      {report.summary_remarks || generateAutoSummary(report, typeOfHouse)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSummaryText(report.summary_remarks || generateAutoSummary(report, typeOfHouse));
+                      setEditingSummary(true);
+                    }}
+                    className="mt-3 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:border-slate-300 transition-colors flex items-center gap-2"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                    Edit Summary
+                  </button>
+                </div>
+              )}
+            </FormSection>
+
+            <FormSection title="Verification Result" icon="check">
+              <div className="flex items-center gap-3">
+                <select
+                  value={report.verification_result || ''}
+                  onChange={(e) => handleVerificationResult(e.target.value)}
+                  disabled={savingResult}
+                  className={`px-4 py-2.5 rounded-lg border text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors ${
+                    report.verification_result === 'POSITIVE' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' :
+                    report.verification_result === 'NEGATIVE' ? 'bg-red-50 border-red-300 text-red-700' :
+                    report.verification_result === 'REFER TO CREDIT' ? 'bg-amber-50 border-amber-300 text-amber-700' :
+                    'bg-white border-slate-200 text-slate-500'
+                  }`}
+                >
+                  <option value="">-- Select Result --</option>
+                  <option value="POSITIVE">Positive</option>
+                  <option value="NEGATIVE">Negative</option>
+                  <option value="REFER TO CREDIT">Refer to Credit</option>
+                </select>
+                {savingResult && <span className="text-xs text-slate-400">Saving...</span>}
+                {report.verification_result && !savingResult && (
+                  <span className={`text-xs font-bold uppercase px-2 py-1 rounded ${
+                    report.verification_result === 'POSITIVE' ? 'bg-emerald-100 text-emerald-700' :
+                    report.verification_result === 'NEGATIVE' ? 'bg-red-100 text-red-700' :
+                    'bg-amber-100 text-amber-700'
+                  }`}>
+                    {report.verification_result}
+                  </span>
+                )}
+              </div>
+            </FormSection>
+
             <FormSection title="Visit Timeline" icon="clock">
               <div className="space-y-3">
-                <TimelineItem label="Submitted" time={formatDateTime(report.submitted_at)} by={report.executive_name} color="bg-blue-500" />
+                <TimelineItem label="Submitted by Maker" time={formatDateTime(report.submitted_at)} by={report.executive_name} color="bg-blue-500" />
                 {report.reviewed_at && (
                   <TimelineItem label="Reviewed" time={formatDateTime(report.reviewed_at)} by="Admin" color="bg-amber-500" />
                 )}
                 {report.approved_at && (
-                  <TimelineItem label="Approved" time={formatDateTime(report.approved_at)} by="Admin" color="bg-emerald-500" />
+                  <TimelineItem label="Submitted by Checker" time={formatDateTime(report.approved_at)} by="Admin" color="bg-emerald-500" />
                 )}
                 {report.status === 'rejected' && report.reviewed_at && (
                   <TimelineItem label="Rejected" time={formatDateTime(report.reviewed_at)} by="Admin" color="bg-red-500" />

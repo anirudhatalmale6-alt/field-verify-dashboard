@@ -45,7 +45,7 @@ function getStatusColor(status: string): string {
 function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     unassigned: 'Unassigned', assigned: 'Assigned', in_progress: 'In Progress',
-    submitted: 'Submitted', approved: 'Approved', rejected: 'Rejected',
+    submitted: 'Submitted by Maker', approved: 'Submitted by Checker', rejected: 'Rejected',
   };
   return labels[status] || status;
 }
@@ -168,8 +168,8 @@ export default function CasesPage() {
           { key: 'all', label: 'All Cases' },
           { key: 'unassigned', label: 'Unassigned' },
           { key: 'assigned', label: 'Assigned' },
-          { key: 'submitted', label: 'Submitted' },
-          { key: 'approved', label: 'Approved' },
+          { key: 'submitted', label: 'Submitted by Maker' },
+          { key: 'approved', label: 'Submitted by Checker' },
           { key: 'rejected', label: 'Rejected' },
         ].map(tab => (
           <button
@@ -225,9 +225,9 @@ export default function CasesPage() {
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">FIR No</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Bank</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Customer</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Address</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Purpose</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Amount</th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Location</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Category</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Executive</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Status</th>
@@ -245,9 +245,12 @@ export default function CasesPage() {
                     <p className="text-sm font-medium text-navy-900">{c.customer_name}</p>
                     <p className="text-[10px] text-slate-400">{c.contact_number}</p>
                   </td>
+                  <td className="px-4 py-3">
+                    <p className="text-xs text-slate-600 leading-relaxed">{c.address || 'N/A'}</p>
+                    <p className="text-[10px] text-slate-400">{c.location}</p>
+                  </td>
                   <td className="px-4 py-3"><span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md whitespace-nowrap">{c.purpose_of_loan}</span></td>
                   <td className="px-4 py-3"><span className="text-sm text-slate-700">{c.finance_amount}</span></td>
-                  <td className="px-4 py-3"><span className="text-xs text-slate-600">{c.location}</span></td>
                   <td className="px-4 py-3">
                     <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border status-badge ${getCategoryColor(c.customer_category)}`}>
                       {c.customer_category}

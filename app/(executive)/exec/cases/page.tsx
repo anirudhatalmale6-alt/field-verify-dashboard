@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { getCases } from '@/lib/api-client';
 import { getStatusColor, getStatusLabel } from '@/lib/utils';
@@ -24,24 +24,86 @@ interface CaseRow {
 export default function ExecCasesPage() {
   const [cases, setCases] = useState<CaseRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  // Default to "assigned" so submitted cases are hidden by default
+  const [filter, setFilter] = useState('assigned');
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await getCases(filter !== 'all' ? { status: filter } : undefined);
-        setCases(data.cases);
-      } catch (err) {
-        console.error('Failed to fetch cases:', err);
-      } finally {
-        setLoading(false);
+  // Push-back modal state
+  const [pushbackCaseId, setPushbackCaseId] = useState<string | null>(null);
+  const [pushbackReason, setPushbackReason] = useState('');
+  const [pushbackSubmitting, setPushbackSubmitting] = useState(false);
+  const [pushbackError, setPushbackError] = useState('');
+
+  const fetchCases = useCallback(async () => {
+    setLoading(true);
+    try {
+      // "todo" filter fetches both assigned and in_progress
+      let data;
+      if (filter === 'assigned') {
+        // Fetch assigned + in_progress separately and merge
+        const [assignedData, inProgressData] = await Promise.all([
+          getCases({ status: 'assigned' }),
+          getCases({ status: 'in_progress' }),
+        ]);
+        data = {
+          cases: [...(assignedData.cases || []), ...(inProgressData.cases || [])],
+        };
+      } else if (filter === 'all') {
+        data = await getCases();
+      } else {
+        data = await getCases({ status: filter });
       }
-    })();
+      setCases(data.cases || []);
+    } catch (err) {
+      console.error('Failed to fetch cases:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [filter]);
 
-  const assigned = cases.filter(c => c.status === 'assigned').length;
+  useEffect(() => {
+    fetchCases();
+  }, [fetchCases]);
+
+  const assigned = cases.filter(c => c.status === 'assigned' || c.status === 'in_progress').length;
   const submitted = cases.filter(c => c.status === 'submitted').length;
   const total = cases.length;
+
+  // Push-back handler
+  const handlePushback = async () => {
+    if (!pushbackCaseId || !pushbackReason.trim()) return;
+    setPushbackSubmitting(true);
+    setPushbackError('');
+    try {
+      const res = await fetch('/api/cases/pushback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ case_id: pushbackCaseId, reason: pushbackReason.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Push-back failed');
+      // Remove the case from the local list immediately
+      setCases(prev => prev.filter(c => c.id !== pushbackCaseId));
+      closePushbackModal();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Push-back failed';
+      setPushbackError(message);
+    } finally {
+      setPushbackSubmitting(false);
+    }
+  };
+
+  const openPushbackModal = (caseId: string) => {
+    setPushbackCaseId(caseId);
+    setPushbackReason('');
+    setPushbackError('');
+  };
+
+  const closePushbackModal = () => {
+    setPushbackCaseId(null);
+    setPushbackReason('');
+    setPushbackError('');
+  };
 
   return (
     <div className="px-4 py-4">
@@ -61,17 +123,17 @@ export default function ExecCasesPage() {
         </div>
       </div>
 
-      {/* Filter */}
+      {/* Filter Tabs — "To Do" is default active */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {[
-          { key: 'all', label: 'All Cases' },
           { key: 'assigned', label: 'To Do' },
+          { key: 'all', label: 'All' },
           { key: 'submitted', label: 'Submitted' },
           { key: 'approved', label: 'Approved' },
         ].map(tab => (
           <button
             key={tab.key}
-            onClick={() => { setFilter(tab.key); setLoading(true); }}
+            onClick={() => setFilter(tab.key)}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
               filter === tab.key
                 ? 'bg-teal-600 text-white shadow-md'
@@ -97,91 +159,116 @@ export default function ExecCasesPage() {
       {!loading && (
         <div className="space-y-3">
           {cases.map(c => (
-            <Link
-              key={c.id}
-              href={c.status === 'assigned' || c.status === 'in_progress' ? `/exec/report/${c.id}` : '#'}
-              className="block"
-            >
-              <div className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${
-                c.status === 'assigned' ? 'border-amber-200 active:scale-[0.98]' :
-                c.status === 'submitted' ? 'border-purple-200' :
-                c.status === 'approved' ? 'border-emerald-200' :
-                'border-slate-100'
-              }`}>
-                {/* Status Bar */}
-                <div className={`h-1 ${
-                  c.status === 'assigned' ? 'bg-amber-500' :
-                  c.status === 'submitted' ? 'bg-purple-500' :
-                  c.status === 'approved' ? 'bg-emerald-500' :
-                  c.status === 'rejected' ? 'bg-red-500' :
-                  'bg-slate-300'
-                }`} />
+            <div key={c.id}>
+              <Link
+                href={c.status === 'assigned' || c.status === 'in_progress' ? `/exec/report/${c.id}` : '#'}
+                className="block"
+              >
+                <div className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${
+                  c.status === 'assigned' ? 'border-amber-200 active:scale-[0.98]' :
+                  c.status === 'in_progress' ? 'border-cyan-200 active:scale-[0.98]' :
+                  c.status === 'submitted' ? 'border-purple-200' :
+                  c.status === 'approved' ? 'border-emerald-200' :
+                  'border-slate-100'
+                }`}>
+                  {/* Status Bar */}
+                  <div className={`h-1 ${
+                    c.status === 'assigned' ? 'bg-amber-500' :
+                    c.status === 'in_progress' ? 'bg-cyan-500' :
+                    c.status === 'submitted' ? 'bg-purple-500' :
+                    c.status === 'approved' ? 'bg-emerald-500' :
+                    c.status === 'rejected' ? 'bg-red-500' :
+                    'bg-slate-300'
+                  }`} />
 
-                <div className="p-4">
-                  {/* Top Row: Name + Status */}
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-bold text-navy-900 truncate">{c.customer_name}</h3>
-                      <p className="text-xs text-slate-500">{c.applicant}</p>
-                    </div>
-                    <span className={`text-[9px] font-bold uppercase px-2 py-1 rounded-full border ml-2 flex-shrink-0 ${getStatusColor(c.status)}`}>
-                      {getStatusLabel(c.status)}
-                    </span>
-                  </div>
-
-                  {/* Address — prominent as client requested */}
-                  <div className="flex items-start gap-2 mb-2">
-                    <svg className="flex-shrink-0 mt-0.5 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
-                    </svg>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-navy-900 leading-snug">{c.address || 'No address provided'}</p>
-                      <p className="text-xs text-teal-600 font-medium">{c.location}</p>
-                    </div>
-                  </div>
-
-                  {/* Details Row */}
-                  <div className="flex items-center gap-3 text-[10px] text-slate-400">
-                    <span className="flex items-center gap-1">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="8" x2="21" y2="8" />
-                      </svg>
-                      {c.bank_name}
-                    </span>
-                    <span>{c.fir_no}</span>
-                    <span className={`font-bold uppercase px-1.5 py-0.5 rounded ${
-                      c.customer_category === 'HOME' ? 'bg-blue-50 text-blue-600' :
-                      c.customer_category === 'OFFICE' ? 'bg-orange-50 text-orange-600' :
-                      'bg-slate-50 text-slate-500'
-                    }`}>
-                      {c.customer_category}
-                    </span>
-                  </div>
-
-                  {/* Contact */}
-                  {c.contact_number && (
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
-                      </svg>
-                      <span className="text-xs text-slate-500">{c.contact_number}</span>
-                    </div>
-                  )}
-
-                  {/* CTA for assigned cases */}
-                  {(c.status === 'assigned' || c.status === 'in_progress') && (
-                    <div className="mt-3 pt-3 border-t border-slate-100">
-                      <span className="flex items-center justify-center gap-2 w-full py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-lg">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-                        </svg>
-                        Start Verification
+                  <div className="p-4">
+                    {/* Top Row: Name + Status */}
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-bold text-navy-900 truncate">{c.customer_name}</h3>
+                        <p className="text-xs text-slate-500">{c.applicant}</p>
+                      </div>
+                      <span className={`text-[9px] font-bold uppercase px-2 py-1 rounded-full border ml-2 flex-shrink-0 ${getStatusColor(c.status)}`}>
+                        {getStatusLabel(c.status)}
                       </span>
                     </div>
-                  )}
+
+                    {/* Address — prominent as client requested */}
+                    <div className="flex items-start gap-2 mb-2">
+                      <svg className="flex-shrink-0 mt-0.5 text-slate-400" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+                      </svg>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-navy-900 leading-snug">{c.address || 'No address provided'}</p>
+                        <p className="text-xs text-teal-600 font-medium">{c.location}</p>
+                      </div>
+                    </div>
+
+                    {/* Details Row */}
+                    <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                      <span className="flex items-center gap-1">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="8" x2="21" y2="8" />
+                        </svg>
+                        {c.bank_name}
+                      </span>
+                      <span>{c.fir_no}</span>
+                      <span className={`font-bold uppercase px-1.5 py-0.5 rounded ${
+                        c.customer_category === 'HOME' ? 'bg-blue-50 text-blue-600' :
+                        c.customer_category === 'OFFICE' ? 'bg-orange-50 text-orange-600' :
+                        'bg-slate-50 text-slate-500'
+                      }`}>
+                        {c.customer_category}
+                      </span>
+                    </div>
+
+                    {/* Contact — Click-to-Call */}
+                    {c.contact_number && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <a
+                          href={`tel:${c.contact_number.replace(/\s+/g, '')}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 active:bg-emerald-100 transition-colors"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
+                          </svg>
+                          <span className="text-xs font-medium text-emerald-700">{c.contact_number}</span>
+                        </a>
+                      </div>
+                    )}
+
+                    {/* CTA for assigned / in_progress cases */}
+                    {(c.status === 'assigned' || c.status === 'in_progress') && (
+                      <div className="mt-3 pt-3 border-t border-slate-100 flex gap-2">
+                        {/* Start Verification button */}
+                        <span className="flex items-center justify-center gap-2 flex-1 py-2.5 bg-teal-600 text-white text-sm font-semibold rounded-lg">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                          </svg>
+                          Start Verification
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </Link>
+              </Link>
+
+              {/* Push Back button — only for assigned cases, rendered outside the Link to avoid navigation */}
+              {c.status === 'assigned' && (
+                <div className="px-4 pb-3 -mt-1 bg-white rounded-b-xl border border-t-0 border-amber-200 shadow-sm">
+                  <button
+                    onClick={() => openPushbackModal(c.id)}
+                    className="flex items-center justify-center gap-2 w-full py-2 bg-red-50 text-red-600 text-sm font-semibold rounded-lg border border-red-200 active:bg-red-100 transition-colors"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                    Push Back
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
 
           {cases.length === 0 && (
@@ -192,6 +279,78 @@ export default function ExecCasesPage() {
               <p className="text-sm text-slate-500">No cases found</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Push-Back Modal */}
+      {pushbackCaseId && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          {/* Overlay */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={closePushbackModal}
+          />
+          {/* Modal Content */}
+          <div className="relative w-full max-w-md mx-4 mb-4 sm:mb-0 bg-white rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom">
+            {/* Header */}
+            <div className="bg-red-50 px-5 py-4 border-b border-red-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="15 18 9 12 15 6" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-navy-900">Push Back Case</h3>
+                  <p className="text-xs text-slate-500">This case will be returned to admin</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 py-4">
+              <label className="block text-sm font-semibold text-navy-900 mb-2">
+                Reason for push-back <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={pushbackReason}
+                onChange={(e) => setPushbackReason(e.target.value)}
+                placeholder="e.g., Incorrect address, unable to reach location, customer not available..."
+                rows={3}
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-navy-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-300 resize-none"
+                autoFocus
+              />
+              {pushbackError && (
+                <p className="mt-2 text-xs text-red-600 font-medium">{pushbackError}</p>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="px-5 pb-5 flex gap-3">
+              <button
+                onClick={closePushbackModal}
+                className="flex-1 py-2.5 bg-slate-100 text-slate-600 text-sm font-semibold rounded-xl border border-slate-200 active:bg-slate-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePushback}
+                disabled={!pushbackReason.trim() || pushbackSubmitting}
+                className="flex-1 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed active:bg-red-700 transition-colors"
+              >
+                {pushbackSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <circle cx="12" cy="12" r="10" strokeOpacity="0.3" /><path d="M4 12a8 8 0 018-8" />
+                    </svg>
+                    Sending...
+                  </span>
+                ) : (
+                  'Confirm Push Back'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

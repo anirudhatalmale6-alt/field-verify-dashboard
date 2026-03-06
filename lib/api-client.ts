@@ -89,7 +89,7 @@ export async function getReport(id: string) {
   return fetchAPI(`/api/reports/${id}`);
 }
 
-export async function updateReport(id: string, data: { status?: string; internal_note?: string }) {
+export async function updateReport(id: string, data: { status?: string; internal_note?: string; summary_remarks?: string; verification_result?: string }) {
   return fetchAPI(`/api/reports/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(data),
@@ -125,6 +125,28 @@ export async function uploadPhotos(reportId: string, files: File[], labels: stri
 // Executives
 export async function getExecutives() {
   return fetchAPI('/api/executives');
+}
+
+export async function createExecutive(data: { name: string; email: string; phone?: string; region?: string; role?: string }) {
+  return fetchAPI('/api/executives', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateExecutive(data: { id: string; name?: string; email?: string; phone?: string; region?: string; resetPassword?: boolean }) {
+  return fetchAPI('/api/executives', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+// Push-back
+export async function pushBackCase(caseId: string, reason: string) {
+  return fetchAPI('/api/cases/pushback', {
+    method: 'POST',
+    body: JSON.stringify({ case_id: caseId, reason }),
+  });
 }
 
 // Audit

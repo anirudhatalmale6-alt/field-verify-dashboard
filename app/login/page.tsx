@@ -119,7 +119,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
-                placeholder="admin@koteshwari.com"
+                placeholder="admin@kospl.in"
                 required
               />
             </div>
@@ -165,10 +165,10 @@ export default function LoginPage() {
             <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Login Credentials</p>
             <div className="space-y-1">
               <p className="text-xs text-slate-600">
-                <span className="font-medium">Admin:</span> admin@koteshwari.com / Kospl@2026
+                <span className="font-medium">Admin:</span> admin@kospl.in / Kospl@2026
               </p>
               <p className="text-xs text-slate-600">
-                <span className="font-medium">Executive:</span> avinash@koteshwari.com / Field@2026
+                <span className="font-medium">Executive:</span> avinash@kospl.in / Field@2026
               </p>
             </div>
           </div>

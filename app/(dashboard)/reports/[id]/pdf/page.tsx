@@ -13,7 +13,6 @@ interface ReportDetail {
   reviewed_at: string | null;
   approved_at: string | null;
   internal_notes: string | null;
-  fir_report_given_by: string;
   fir_reference_number: string;
   customer_name: string;
   address_confirmed: number;
@@ -52,6 +51,8 @@ interface ReportDetail {
   company_name_board: string;
   tpc_neighbour_name: string;
   special_remarks: string;
+  summary_remarks: string | null;
+  verification_result: string | null;
   bank_name: string;
   fir_no: string;
   applicant: string;
@@ -196,10 +197,10 @@ export default function PDFPreviewPage() {
         </div>
 
         {/* Body */}
-        <div className="p-8">
-          <section className="mb-8">
+        <div className="p-6">
+          <section className="mb-4">
             <SectionTitle title="Case Information" />
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
               <PDFField label="Bank Name" value={report.bank_name} />
               <PDFField label="FIR No" value={report.fir_no} />
               <PDFField label="Applicant" value={report.applicant || 'N/A'} />
@@ -214,10 +215,9 @@ export default function PDFPreviewPage() {
             </div>
           </section>
 
-          <section className="mb-8">
+          <section className="mb-4">
             <SectionTitle title="Section 1: Initial Information" />
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
-              <PDFField label="FIR Report Given By" value={report.fir_report_given_by || 'N/A'} />
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
               <PDFField label="FIR Reference Number" value={report.fir_reference_number || 'N/A'} />
               <PDFField label="Name of Customer" value={report.customer_name} />
               <PDFField
@@ -228,9 +228,9 @@ export default function PDFPreviewPage() {
             </div>
           </section>
 
-          <section className="mb-8">
+          <section className="mb-4">
             <SectionTitle title="Section 2: Location & Residence Details" />
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
               <PDFField label="Person Met" value={report.person_met || 'N/A'} />
               <PDFField label="Landmark" value={report.landmark || 'N/A'} />
               <PDFField label="Whether RVR or BVR" value={report.rvr_or_bvr || 'N/A'} />
@@ -244,9 +244,9 @@ export default function PDFPreviewPage() {
           </section>
 
           {report.rvr_or_bvr !== 'BVR' && (
-            <section className="mb-8">
+            <section className="mb-4">
               <SectionTitle title="Section 3: Personal & Residence Information" />
-              <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
                 <PDFField label="Date of Birth / Age" value={report.dob_or_age || 'N/A'} />
                 <PDFField label="Area of House" value={report.area_of_house || 'N/A'} />
                 <PDFField label="Type of House" value={typeOfHouse.length > 0 ? typeOfHouse.join(', ') : 'N/A'} />
@@ -257,9 +257,9 @@ export default function PDFPreviewPage() {
           )}
 
           {report.rvr_or_bvr !== 'BVR' && (
-            <section className="mb-8">
+            <section className="mb-4">
               <SectionTitle title="Section 4: Rental & Residence Duration" />
-              <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
                 {report.rented_owner_name && <PDFField label="Rented Owner Name" value={report.rented_owner_name} />}
                 <PDFField label="Staying Years" value={report.staying_years || 'N/A'} />
                 <PDFField label="Family Members" value={report.family_members || 'N/A'} />
@@ -269,9 +269,9 @@ export default function PDFPreviewPage() {
           )}
 
           {report.rvr_or_bvr !== 'BVR' && (
-            <section className="mb-8">
+            <section className="mb-4">
               <SectionTitle title="Section 5: Spouse & Occupation Details" />
-              <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
                 <PDFField label="Spouse Occupation" value={report.spouse_occupation || 'N/A'} />
                 {report.spouse_occupation_details && <PDFField label="Spouse Details" value={report.spouse_occupation_details} />}
                 <PDFField label="Customer Category" value={report.customer_occ_category || 'N/A'} />
@@ -280,133 +280,179 @@ export default function PDFPreviewPage() {
           )}
 
           {report.customer_occ_category === 'SALARIED' && (
-            <section className="mb-8">
+            <section className="mb-4">
               <SectionTitle title="Section 6: Employment Details (Salaried)" />
-              <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
                 <PDFField label="Company Name" value={report.company_name || 'N/A'} />
                 <PDFField label="Company Address" value={report.company_address || 'N/A'} />
                 <PDFField label="Designation" value={report.designation || 'N/A'} />
                 <PDFField label="Years Working" value={report.years_working || 'N/A'} />
+                <PDFField label="Office Setup Seen" value={report.office_setup_seen || 'N/A'} highlight={report.office_setup_seen === 'YES' ? 'green' : undefined} />
+                <PDFField label="Employees Seen" value={report.employees_seen || 'N/A'} />
               </div>
             </section>
           )}
 
           {report.customer_occ_category === 'BUSINESSMAN' && (
-            <section className="mb-8">
+            <section className="mb-4">
               <SectionTitle title="Section 7: Business Details (Businessman)" />
-              <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
                 <PDFField label="Business Name & Address" value={report.business_name_address || 'N/A'} />
                 <PDFField label="Office Ownership" value={report.office_ownership || 'N/A'} />
                 <PDFField label="Nature of Business" value={report.nature_of_business || 'N/A'} />
                 <PDFField label="Years in Business" value={report.years_in_business || 'N/A'} />
+                <PDFField label="Office Location" value={report.office_location || 'N/A'} />
+                <PDFField label="Office Area (Sqft)" value={report.office_area_sqft || 'N/A'} />
+                <PDFField label="Office Setup Seen" value={report.office_setup_seen || 'N/A'} highlight={report.office_setup_seen === 'YES' ? 'green' : undefined} />
+                <PDFField label="Employees Seen" value={report.employees_seen || 'N/A'} />
+                <PDFField label="Company Name Board" value={report.company_name_board || 'N/A'} />
               </div>
             </section>
           )}
 
-          <section className="mb-8">
-            <SectionTitle title="Office Verification" />
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
-              <PDFField label="Office Location" value={report.office_location || 'N/A'} />
-              <PDFField label="Office Area (Sqft)" value={report.office_area_sqft || 'N/A'} />
-              <PDFField label="Office Setup Seen" value={report.office_setup_seen || 'N/A'} highlight={report.office_setup_seen === 'YES' ? 'green' : undefined} />
-              <PDFField label="Employees Seen" value={report.employees_seen || 'N/A'} />
+          <section className="mb-4">
+            <SectionTitle title="Third Party Confirmation (TPC)" />
+            <div className="mt-2"><PDFField label="TPC / Neighbour Name" value={report.tpc_neighbour_name || 'N/A'} /></div>
+          </section>
+
+          <section className="mb-4">
+            <SectionTitle title="Summary Remarks" />
+            <div className="bg-teal-50 border border-teal-200 rounded-lg p-3 mt-2">
+              <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">{report.summary_remarks || (() => {
+                const r = report;
+                const s: string[] = [];
+                s.push(`Field verification was conducted for ${r.customer_name} (FIR Ref: ${r.fir_reference_number || r.fir_no}) at ${r.address || 'N/A'}, ${r.location || 'N/A'}, under ${r.bank_name} for ${r.purpose_of_loan} of amount ${r.finance_amount || 'N/A'}.`);
+                s.push(`The address was ${r.address_confirmed ? 'CONFIRMED' : 'NOT CONFIRMED'} during the visit. Person met at the premises: ${r.person_met || 'N/A'}. Landmark: ${r.landmark || 'N/A'}. Verification type: ${r.rvr_or_bvr || 'N/A'}.`);
+                if (r.contact_number) s.push(`Contact number: ${r.contact_number}.`);
+                if (r.latitude && r.longitude) s.push(`GPS coordinates captured: ${r.latitude.toFixed(6)}, ${r.longitude.toFixed(6)}.`);
+                if (r.rvr_or_bvr !== 'BVR') {
+                  s.push(`The applicant's date of birth/age is ${r.dob_or_age || 'N/A'}. The house is located in ${r.area_of_house || 'N/A'} area, type: ${typeOfHouse.length > 0 ? typeOfHouse.join(', ') : 'N/A'}, area ${r.area_in_sqft || 'N/A'} sqft, ownership: ${r.ownership_details || 'N/A'}.`);
+                  if (r.rented_owner_name) s.push(`Rented from: ${r.rented_owner_name}.`);
+                  s.push(`Staying since ${r.staying_years || 'N/A'} years with ${r.family_members || 'N/A'} family members and ${r.earning_members || 'N/A'} earning members.`);
+                  if (r.spouse_occupation) s.push(`Spouse occupation: ${r.spouse_occupation}${r.spouse_occupation_details ? ' (' + r.spouse_occupation_details + ')' : ''}.`);
+                }
+                if (r.customer_occ_category === 'SALARIED') {
+                  s.push(`The customer is salaried, working at ${r.company_name || 'N/A'} (${r.company_address || 'N/A'}) as ${r.designation || 'N/A'} for ${r.years_working || 'N/A'} years. Office setup ${r.office_setup_seen === 'YES' ? 'was seen' : 'was not seen'}, employees seen: ${r.employees_seen || 'N/A'}.`);
+                } else if (r.customer_occ_category === 'BUSINESSMAN') {
+                  s.push(`The customer is a businessman. Business: ${r.business_name_address || 'N/A'}, nature: ${r.nature_of_business || 'N/A'}, running for ${r.years_in_business || 'N/A'} years. Office ownership: ${r.office_ownership || 'N/A'}, location: ${r.office_location || 'N/A'}, area: ${r.office_area_sqft || 'N/A'} sqft. Office setup ${r.office_setup_seen === 'YES' ? 'was seen' : 'was not seen'}, employees seen: ${r.employees_seen || 'N/A'}, company name board: ${r.company_name_board || 'N/A'}.`);
+                }
+                s.push(`Third party confirmation (TPC) / Neighbour: ${r.tpc_neighbour_name || 'N/A'}.`);
+                if (r.special_remarks) s.push(`Special remarks by field executive: ${r.special_remarks}.`);
+                if (r.verification_result) s.push(`Verification result: ${r.verification_result}.`);
+                return s.join(' ');
+              })()}</p>
             </div>
           </section>
 
-          {report.rvr_or_bvr === 'BVR' && (
-            <section className="mb-8">
-              <SectionTitle title="Section 8: Business Verification (Name Board)" />
-              <div className="mt-3"><PDFField label="Company Name Board" value={report.company_name_board || 'N/A'} /></div>
+          {report.verification_result && (
+            <section className="mb-4">
+              <SectionTitle title="Verification Result" />
+              <div className="mt-2">
+                <span className={`inline-block text-sm font-bold uppercase px-3 py-1.5 rounded-lg border ${
+                  report.verification_result === 'POSITIVE' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' :
+                  report.verification_result === 'NEGATIVE' ? 'bg-red-50 border-red-300 text-red-700' :
+                  'bg-amber-50 border-amber-300 text-amber-700'
+                }`}>
+                  {report.verification_result}
+                </span>
+              </div>
             </section>
           )}
 
-          <section className="mb-8">
-            <SectionTitle title="Section 9: Third Party Confirmation (TPC)" />
-            <div className="mt-3"><PDFField label="TPC / Neighbour Name" value={report.tpc_neighbour_name || 'N/A'} /></div>
-          </section>
+          {report.special_remarks && (
+            <section className="mb-4">
+              <SectionTitle title="Special Remarks" />
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mt-2">
+                <p className="text-xs text-slate-700 leading-relaxed">{report.special_remarks}</p>
+              </div>
+            </section>
+          )}
 
-          <section className="mb-8">
-            <SectionTitle title="Section 10: Special Remarks" />
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mt-3">
-              <p className="text-sm text-slate-700 leading-relaxed">{report.special_remarks || 'No special remarks.'}</p>
-            </div>
-          </section>
-
-          <section className="mb-8">
+          <section className="mb-4">
             <SectionTitle title={`Field Photos (${photos.length})`} />
             {photos.length > 0 ? (
-              <div className="grid grid-cols-3 gap-3 mt-3">
+              <div className="grid grid-cols-2 gap-3 mt-2">
                 {photos.map(photo => (
-                  <div key={photo.id} className="bg-slate-100 rounded-lg p-3 text-center border border-slate-200">
-                    <div className="h-[80px] flex items-center justify-center mb-2">
+                  <div key={photo.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200">
+                    <div className="h-[180px] flex items-center justify-center bg-slate-100">
                       {photo.file_path ? (
-                        <img src={photo.file_path} alt={photo.label} className="max-h-full rounded" />
+                        <img src={photo.file_path} alt={photo.label} className="w-full h-full object-cover" />
                       ) : (
-                        <svg className="text-slate-300" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="text-slate-300" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21,15 16,10 5,21" />
                         </svg>
                       )}
                     </div>
-                    <p className="text-xs font-medium text-navy-900">{photo.label}</p>
-                    <p className="text-[9px] text-slate-400 mt-0.5">{formatDateTime(photo.captured_at)}</p>
-                    <p className="text-[9px] text-slate-400">GPS Tagged</p>
+                    <div className="p-2">
+                      <p className="text-xs font-semibold text-navy-900">{photo.label}</p>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <p className="text-[9px] text-slate-400">{formatDateTime(photo.captured_at)}</p>
+                        {photo.latitude && photo.longitude ? (
+                          <p className="text-[9px] text-teal-600 font-medium">GPS: {photo.latitude.toFixed(4)}, {photo.longitude.toFixed(4)}</p>
+                        ) : (
+                          <p className="text-[9px] text-slate-400">No GPS</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-slate-400 mt-3">No photos captured yet.</p>
+              <p className="text-xs text-slate-400 mt-2">No photos captured yet.</p>
             )}
           </section>
 
-          <section className="mb-8">
+          <section className="mb-4">
             <SectionTitle title="Visit Details" />
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3 mt-3">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
               <PDFField label="Field Executive" value={`${report.executive_name} (${report.executive_id})`} />
-              <PDFField label="Submitted" value={formatDateTime(report.submitted_at)} />
+              <PDFField label="Submitted by Maker" value={formatDateTime(report.submitted_at)} />
               {report.reviewed_at && <PDFField label="Reviewed" value={formatDateTime(report.reviewed_at)} />}
-              {report.approved_at && <PDFField label="Approved" value={formatDateTime(report.approved_at)} />}
+              {report.approved_at && <PDFField label="Submitted by Checker" value={formatDateTime(report.approved_at)} />}
               <PDFField label="Status" value={getStatusLabel(report.status)} />
             </div>
           </section>
 
           {report.internal_notes && (
-            <section className="mb-8">
+            <section className="mb-4">
               <SectionTitle title="Internal Notes" />
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-3">
-                <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-line">{report.internal_notes}</p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-2">
+                <p className="text-xs text-amber-900 leading-relaxed whitespace-pre-line">{report.internal_notes}</p>
               </div>
             </section>
           )}
 
-          {auditTrail.length > 0 && (
-            <section className="mb-6">
-              <SectionTitle title="Audit Trail" />
-              <div className="mt-3 border border-slate-200 rounded-lg overflow-hidden">
-                <table className="w-full text-xs">
+          <section className="mb-4">
+            <SectionTitle title="Audit Trail" />
+            {auditTrail.length > 0 ? (
+              <div className="mt-2 border border-slate-200 rounded-lg overflow-hidden">
+                <table className="w-full text-[10px]">
                   <thead>
                     <tr className="bg-slate-50">
-                      <th className="text-left px-3 py-2 font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Time</th>
-                      <th className="text-left px-3 py-2 font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Action</th>
-                      <th className="text-left px-3 py-2 font-semibold text-slate-500 text-[10px] uppercase tracking-wider">By</th>
-                      <th className="text-left px-3 py-2 font-semibold text-slate-500 text-[10px] uppercase tracking-wider">Details</th>
+                      <th className="text-left px-2 py-1.5 font-semibold text-slate-500 text-[9px] uppercase tracking-wider">Time</th>
+                      <th className="text-left px-2 py-1.5 font-semibold text-slate-500 text-[9px] uppercase tracking-wider">Action</th>
+                      <th className="text-left px-2 py-1.5 font-semibold text-slate-500 text-[9px] uppercase tracking-wider">By</th>
+                      <th className="text-left px-2 py-1.5 font-semibold text-slate-500 text-[9px] uppercase tracking-wider">Details</th>
                     </tr>
                   </thead>
                   <tbody>
                     {auditTrail.map(entry => (
                       <tr key={entry.id} className="border-t border-slate-100">
-                        <td className="px-3 py-2 text-slate-600 font-mono whitespace-nowrap">{formatDateTime(entry.performed_at)}</td>
-                        <td className="px-3 py-2 text-slate-800 font-medium">{entry.action}</td>
-                        <td className="px-3 py-2 text-slate-600">{entry.performed_by}</td>
-                        <td className="px-3 py-2 text-slate-500">{entry.details}</td>
+                        <td className="px-2 py-1.5 text-slate-600 font-mono whitespace-nowrap">{formatDateTime(entry.performed_at)}</td>
+                        <td className="px-2 py-1.5 text-slate-800 font-medium">{entry.action}</td>
+                        <td className="px-2 py-1.5 text-slate-600">{entry.performed_by}</td>
+                        <td className="px-2 py-1.5 text-slate-500">{entry.details}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </section>
-          )}
+            ) : (
+              <p className="text-xs text-slate-400 mt-2">No audit trail entries recorded.</p>
+            )}
+          </section>
 
-          <div className="border-t border-slate-200 pt-6 mt-8">
+          <div className="border-t border-slate-200 pt-4 mt-4">
             <div className="flex items-center justify-between text-[10px] text-slate-400">
               <div>
                 <p className="font-semibold text-navy-900">Koteshwari Onfield Services Pvt. Ltd.</p>

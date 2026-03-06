@@ -62,7 +62,7 @@ export async function GET() {
 
     // Recent reports
     const recentReports = db.prepare(`
-      SELECT r.id, r.customer_name, r.location, r.status, r.submitted_at,
+      SELECT r.id, r.customer_name, r.address, r.contact_number, r.location, r.status, r.submitted_at,
         c.fir_no as case_id, c.purpose_of_loan, c.bank_name,
         u.name as executive_name
       FROM reports r

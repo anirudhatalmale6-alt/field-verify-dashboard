@@ -179,6 +179,15 @@ function initializeSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_audit_report ON audit_trail(report_id);
   `);
 
+  // Migrations
+  const reportCols = db.prepare("PRAGMA table_info(reports)").all() as { name: string }[];
+  if (!reportCols.find(c => c.name === 'summary_remarks')) {
+    db.exec("ALTER TABLE reports ADD COLUMN summary_remarks TEXT");
+  }
+  if (!reportCols.find(c => c.name === 'verification_result')) {
+    db.exec("ALTER TABLE reports ADD COLUMN verification_result TEXT");
+  }
+
   // Seed default admin if no users exist
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {
@@ -191,26 +200,26 @@ function seedDefaultData(db: Database.Database) {
 
   // Admin user
   db.prepare(`INSERT INTO users (id, name, email, phone, password_hash, role, avatar, region) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run('ADM001', 'Admin', 'admin@koteshwari.com', '+91 98765 00000', adminHash, 'admin', 'AD', 'Head Office');
+    .run('ADM001', 'Admin', 'admin@kospl.in', '+91 98765 00000', adminHash, 'admin', 'AD', 'Head Office');
 
   // Executives (from the real form)
   const execHash = bcrypt.hashSync('Field@2026', 10);
   const executives = [
-    ['FE001', 'AVINASH GARJE', 'avinash@koteshwari.com', '+91 98765 00001', 'AG', 'Mumbai Central'],
-    ['FE002', 'CHETAN NEWALE', 'chetan@koteshwari.com', '+91 98765 00002', 'CN', 'Mumbai West'],
-    ['FE003', 'BABASAHEB WAGHMARE', 'babasaheb@koteshwari.com', '+91 98765 00003', 'BW', 'Thane'],
-    ['FE004', 'DAVID LOPEZ', 'david@koteshwari.com', '+91 98765 00004', 'DL', 'Navi Mumbai'],
-    ['FE005', 'DILIP PATIL', 'dilip@koteshwari.com', '+91 98765 00005', 'DP', 'Pune'],
-    ['FE006', 'GANESH GANAGE', 'ganesh.g@koteshwari.com', '+91 98765 00006', 'GG', 'Mumbai East'],
-    ['FE007', 'GANESH KHOTE', 'ganesh.k@koteshwari.com', '+91 98765 00007', 'GK', 'Kalyan'],
-    ['FE008', 'HEMANTH TAMBAT', 'hemanth@koteshwari.com', '+91 98765 00008', 'HT', 'Dombivli'],
-    ['FE009', 'KALLESHWAR KADAM', 'kalleshwar@koteshwari.com', '+91 98765 00009', 'KK', 'Panvel'],
-    ['FE010', 'NITIN GADHAVE', 'nitin@koteshwari.com', '+91 98765 00010', 'NG', 'Vasai-Virar'],
-    ['FE011', 'PRASAD OVHAL', 'prasad@koteshwari.com', '+91 98765 00011', 'PO', 'Bhiwandi'],
-    ['FE012', 'PRASHANT DOLAS', 'prashant@koteshwari.com', '+91 98765 00012', 'PD', 'Ulhasnagar'],
-    ['FE013', 'SATISH JAIN', 'satish@koteshwari.com', '+91 98765 00013', 'SJ', 'Dadar'],
-    ['FE014', 'SHUBHAM KAMTHE', 'shubham@koteshwari.com', '+91 98765 00014', 'SK', 'Andheri'],
-    ['FE015', 'SIDDHARTH VANJARE', 'siddharth@koteshwari.com', '+91 98765 00015', 'SV', 'Borivali'],
+    ['FE001', 'AVINASH GARJE', 'avinash@kospl.in', '+91 98765 00001', 'AG', 'Mumbai Central'],
+    ['FE002', 'CHETAN NEWALE', 'chetan@kospl.in', '+91 98765 00002', 'CN', 'Mumbai West'],
+    ['FE003', 'BABASAHEB WAGHMARE', 'babasaheb@kospl.in', '+91 98765 00003', 'BW', 'Thane'],
+    ['FE004', 'DAVID LOPEZ', 'david@kospl.in', '+91 98765 00004', 'DL', 'Navi Mumbai'],
+    ['FE005', 'DILIP PATIL', 'dilip@kospl.in', '+91 98765 00005', 'DP', 'Pune'],
+    ['FE006', 'GANESH GANAGE', 'ganesh.g@kospl.in', '+91 98765 00006', 'GG', 'Mumbai East'],
+    ['FE007', 'GANESH KHOTE', 'ganesh.k@kospl.in', '+91 98765 00007', 'GK', 'Kalyan'],
+    ['FE008', 'HEMANTH TAMBAT', 'hemanth@kospl.in', '+91 98765 00008', 'HT', 'Dombivli'],
+    ['FE009', 'KALLESHWAR KADAM', 'kalleshwar@kospl.in', '+91 98765 00009', 'KK', 'Panvel'],
+    ['FE010', 'NITIN GADHAVE', 'nitin@kospl.in', '+91 98765 00010', 'NG', 'Vasai-Virar'],
+    ['FE011', 'PRASAD OVHAL', 'prasad@kospl.in', '+91 98765 00011', 'PO', 'Bhiwandi'],
+    ['FE012', 'PRASHANT DOLAS', 'prashant@kospl.in', '+91 98765 00012', 'PD', 'Ulhasnagar'],
+    ['FE013', 'SATISH JAIN', 'satish@kospl.in', '+91 98765 00013', 'SJ', 'Dadar'],
+    ['FE014', 'SHUBHAM KAMTHE', 'shubham@kospl.in', '+91 98765 00014', 'SK', 'Andheri'],
+    ['FE015', 'SIDDHARTH VANJARE', 'siddharth@kospl.in', '+91 98765 00015', 'SV', 'Borivali'],
   ];
 
   const insertExec = db.prepare(`INSERT INTO users (id, name, email, phone, password_hash, role, avatar, region) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);

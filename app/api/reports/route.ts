@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       )
     `).run(
       reportId, body.case_id, executiveId,
-      body.fir_report_given_by || '', body.fir_reference_number || '', body.customer_name || '', body.address_confirmed ? 1 : 0,
+      '', body.fir_reference_number || '', body.customer_name || '', body.address_confirmed ? 1 : 0,
       body.person_met || '', body.landmark || '', body.rvr_or_bvr || 'RVR', body.address || '', body.location || '', body.contact_number || '', body.latitude || null, body.longitude || null,
       body.dob_or_age || '', body.area_of_house || '', JSON.stringify(body.type_of_house || []), body.area_in_sqft || '', body.ownership_details || '',
       body.rented_owner_name || '', body.staying_years || '', body.family_members || '', body.earning_members || '',

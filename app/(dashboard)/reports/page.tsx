@@ -67,8 +67,8 @@ export default function ReportsPage() {
           { key: 'all', label: 'All Reports' },
           { key: 'pending', label: 'Pending' },
           { key: 'in_review', label: 'In Review' },
-          { key: 'verified', label: 'Verified' },
-          { key: 'approved', label: 'Approved' },
+          { key: 'verified', label: 'Submitted by Maker' },
+          { key: 'approved', label: 'Submitted by Checker' },
           { key: 'rejected', label: 'Rejected' },
         ].map(tab => (
           <button
@@ -138,7 +138,7 @@ export default function ReportsPage() {
                   <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Category</th>
                   <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Location</th>
                   <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Executive</th>
-                  <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Submitted</th>
+                  <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Submitted by Maker</th>
                   <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Photos</th>
                   <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Status</th>
                   <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Actions</th>
