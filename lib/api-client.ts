@@ -155,3 +155,21 @@ export async function getAuditTrail(action?: string) {
   if (action) sp.set('action', action);
   return fetchAPI(`/api/audit?${sp.toString()}`);
 }
+
+// Chat
+export async function getChatContacts() {
+  return fetchAPI('/api/chat');
+}
+
+export async function getChatMessages(userId: string, after?: string) {
+  const sp = new URLSearchParams({ with: userId });
+  if (after) sp.set('after', after);
+  return fetchAPI(`/api/chat?${sp.toString()}`);
+}
+
+export async function sendChatMessage(receiverId: string, content: string) {
+  return fetchAPI('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({ receiver_id: receiverId, content }),
+  });
+}

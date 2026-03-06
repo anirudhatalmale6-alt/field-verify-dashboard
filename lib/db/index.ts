@@ -168,6 +168,16 @@ function initializeSchema(db: Database.Database) {
       imported_at TEXT DEFAULT (datetime('now'))
     );
 
+    -- Chat messages
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id TEXT PRIMARY KEY,
+      sender_id TEXT NOT NULL REFERENCES users(id),
+      receiver_id TEXT NOT NULL REFERENCES users(id),
+      content TEXT NOT NULL,
+      is_read INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     -- Indexes
     CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);
     CREATE INDEX IF NOT EXISTS idx_cases_executive ON cases(executive_id);
@@ -177,6 +187,9 @@ function initializeSchema(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
     CREATE INDEX IF NOT EXISTS idx_photos_report ON photos(report_id);
     CREATE INDEX IF NOT EXISTS idx_audit_report ON audit_trail(report_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_sender ON chat_messages(sender_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_receiver ON chat_messages(receiver_id);
+    CREATE INDEX IF NOT EXISTS idx_chat_pair ON chat_messages(sender_id, receiver_id);
   `);
 
   // Migrations

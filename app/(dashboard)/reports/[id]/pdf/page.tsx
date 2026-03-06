@@ -144,10 +144,10 @@ export default function PDFPreviewPage() {
   const handlePrint = () => { window.print(); };
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 print:p-0">
       <style>{`
         @media print {
-          @page { margin: 10mm; }
+          @page { margin: 8mm 10mm; size: A4; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           section { break-inside: avoid; }
         }
@@ -173,7 +173,7 @@ export default function PDFPreviewPage() {
       `}</style>
       <div className="pdf-watermark">Koteshwari Onfield Services Pvt Ltd</div>
       {/* Toolbar */}
-      <div className="flex items-center justify-between mb-6 print:hidden">
+      <div className="flex items-center justify-between mb-4 print:hidden">
         <div className="flex items-center gap-2 text-xs text-slate-400">
           <Link href="/reports" className="hover:text-teal-600 transition-colors">Reports</Link>
           <span>/</span>
@@ -198,9 +198,9 @@ export default function PDFPreviewPage() {
       </div>
 
       {/* PDF Content */}
-      <div className="max-w-[800px] mx-auto bg-white shadow-xl rounded-2xl print:shadow-none print:rounded-none overflow-hidden">
+      <div className="w-full bg-white shadow-xl rounded-2xl print:shadow-none print:rounded-none overflow-hidden">
         {/* Header Banner */}
-        <div className="bg-navy-900 text-white p-8 relative overflow-hidden">
+        <div className="bg-navy-900 text-white px-4 py-6 relative overflow-hidden">
           <div className="absolute top-[-40px] right-[-40px] w-[160px] h-[160px] rounded-full bg-teal-600/20" />
           <div className="absolute bottom-[-20px] left-[-30px] w-[100px] h-[100px] rounded-full bg-teal-600/10" />
 
@@ -232,7 +232,7 @@ export default function PDFPreviewPage() {
         </div>
 
         {/* Body */}
-        <div className="p-6">
+        <div className="px-4 py-5 print:px-2">
           <section className="mb-4">
             <SectionTitle title="Case Information" />
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">

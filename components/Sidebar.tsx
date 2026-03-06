@@ -11,6 +11,7 @@ const navItems = [
   { href: '/upload', label: 'Upload Excel', icon: UploadIcon },
   { href: '/reports', label: 'Reports', icon: ReportsIcon },
   { href: '/executives', label: 'Executives', icon: ExecutivesIcon },
+  { href: '/chat', label: 'Chat', icon: ChatIcon },
   { href: '/audit', label: 'Audit Trail', icon: AuditIcon },
   { href: '/admin-submit', label: 'Submit Report', icon: AdminSubmitIcon },
 ];
@@ -74,6 +75,16 @@ function AuditIcon() {
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M10 18a8 8 0 100-16 8 8 0 000 16z" />
       <polyline points="10,6 10,10 13,12" />
+    </svg>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 13a2 2 0 01-2 2H7l-4 3V5a2 2 0 012-2h10a2 2 0 012 2z" />
+      <line x1="7" y1="8" x2="13" y2="8" />
+      <line x1="7" y1="11" x2="11" y2="11" />
     </svg>
   );
 }

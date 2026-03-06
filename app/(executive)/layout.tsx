@@ -28,6 +28,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
 
   const tabs = [
     { href: '/exec/cases', label: 'My Cases', icon: CasesIcon },
+    { href: '/exec/chat', label: 'Chat', icon: ExecChatIcon },
     { href: '/exec/profile', label: 'Profile', icon: ProfileIcon },
   ];
 
@@ -86,6 +87,14 @@ function CasesIcon({ active }: { active: boolean }) {
       <rect x="3" y="4" width="18" height="16" rx="2" />
       <line x1="3" y1="8" x2="21" y2="8" />
       <line x1="9" y1="4" x2="9" y2="8" />
+    </svg>
+  );
+}
+
+function ExecChatIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#0d9488' : '#94a3b8'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
     </svg>
   );
 }
