@@ -432,18 +432,31 @@ export default function AdminSubmitPage() {
               <Field label="Company Address" value={form.company_address} onChange={v => updateField('company_address', v)} />
               <Field label="Designation" value={form.designation} onChange={v => updateField('designation', v)} />
               <Field label="Years Working" value={form.years_working} onChange={v => updateField('years_working', v)} />
-              <div>
-                <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1 block">Office Setup Seen</label>
-                <div className="flex gap-2">
-                  {['YES', 'NO'].map(o => (
-                    <button key={o} onClick={() => updateField('office_setup_seen', o)}
-                      className={`px-6 py-2 rounded-lg text-xs font-semibold transition-all ${form.office_setup_seen === o ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>
-                      {o}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <Field label="Employees Seen" value={form.employees_seen} onChange={v => updateField('employees_seen', v)} />
+              {/* Office fields only for BVR — not needed for RVR home verification */}
+              {form.rvr_or_bvr === 'BVR' && (
+                <>
+                  <div>
+                    <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1 block">Office Setup Seen</label>
+                    <div className="flex gap-2">
+                      {['YES', 'NO'].map(o => (
+                        <button key={o} onClick={() => updateField('office_setup_seen', o)}
+                          className={`px-6 py-2 rounded-lg text-xs font-semibold transition-all ${form.office_setup_seen === o ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>
+                          {o}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <Field label="Employees Seen" value={form.employees_seen} onChange={v => updateField('employees_seen', v)} />
+                  <div>
+                    <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1 block">Company Name Board</label>
+                    <select value={form.company_name_board} onChange={e => updateField('company_name_board', e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                      <option value="">Select</option>
+                      {COMPANY_BOARD_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
           </Section>
         )}

@@ -799,29 +799,34 @@ export default function VerificationFormPage() {
           <FormField label="Company Address" value={form.company_address} onChange={v => updateForm('company_address', v)} multiline />
           <FormField label="Designation" value={form.designation} onChange={v => updateForm('designation', v)} />
           <FormField label="Years Working" value={form.years_working} onChange={v => updateForm('years_working', v)} />
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Office Setup Seen?</label>
-            <div className="flex gap-2">
-              {['YES', 'NO'].map(opt => (
-                <button
-                  key={opt}
-                  onClick={() => updateForm('office_setup_seen', opt)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                    form.office_setup_seen === opt ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-          <FormField label="No. of Employees Seen" value={form.employees_seen} onChange={v => updateForm('employees_seen', v)} />
-          <DropdownField
-            label="Company Name Board"
-            value={form.company_name_board}
-            options={COMPANY_BOARD_OPTIONS}
-            onChange={v => updateForm('company_name_board', v)}
-          />
+          {/* Office Setup & Employees — only show for BVR (not needed for RVR home verification) */}
+          {form.rvr_or_bvr === 'BVR' && (
+            <>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Office Setup Seen?</label>
+                <div className="flex gap-2">
+                  {['YES', 'NO'].map(opt => (
+                    <button
+                      key={opt}
+                      onClick={() => updateForm('office_setup_seen', opt)}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                        form.office_setup_seen === opt ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <FormField label="No. of Employees Seen" value={form.employees_seen} onChange={v => updateForm('employees_seen', v)} />
+              <DropdownField
+                label="Company Name Board"
+                value={form.company_name_board}
+                options={COMPANY_BOARD_OPTIONS}
+                onChange={v => updateForm('company_name_board', v)}
+              />
+            </>
+          )}
         </div>
       )}
 
