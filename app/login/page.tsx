@@ -44,17 +44,8 @@ export default function LoginPage() {
         }} />
 
         <div className="relative z-10 max-w-md px-12">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-teal-600 flex items-center justify-center">
-              <svg width="26" height="26" viewBox="0 0 20 20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 2L3 7v9a2 2 0 002 2h10a2 2 0 002-2V7l-7-5z" />
-                <path d="M8 18V12h4v6" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-2xl font-display font-bold text-white">Koteshwari</h1>
-              <p className="text-xs text-teal-400 tracking-widest uppercase font-semibold">Onfield Services</p>
-            </div>
+          <div className="flex items-center gap-4 mb-8">
+            <img src="/kospl-logo.jpg" alt="KOSPL" className="h-16 w-auto rounded-lg" />
           </div>
 
           <h2 className="text-3xl font-display font-bold text-white leading-tight mb-4">
@@ -91,13 +82,7 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center px-6 lg:px-16 bg-white">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-teal-600 flex items-center justify-center">
-              <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 2L3 7v9a2 2 0 002 2h10a2 2 0 002-2V7l-7-5z" />
-                <path d="M8 18V12h4v6" />
-              </svg>
-            </div>
-            <h1 className="text-xl font-display font-bold text-navy-900">Koteshwari Onfield</h1>
+            <img src="/kospl-logo.jpg" alt="KOSPL" className="h-12 w-auto rounded-lg" />
           </div>
 
           <div className="mb-8">

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { submitReport, uploadPhotos } from '@/lib/api-client';
+import { submitReport, uploadPhotos, getExecutives } from '@/lib/api-client';
 
 interface CaseInfo {
   id: string;
@@ -43,6 +43,8 @@ export default function AdminSubmitPage() {
   const [submitting, setSubmitting] = useState(false);
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [executives, setExecutives] = useState<{ id: string; name: string }[]>([]);
+  const [selectedExecId, setSelectedExecId] = useState<string>('');
 
   const [form, setForm] = useState({
     fir_reference_number: '',
@@ -86,27 +88,30 @@ export default function AdminSubmitPage() {
   });
 
   useEffect(() => {
-    fetch(`/api/cases?id=${caseId}`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.case) {
-          setCaseInfo(data.case);
-          let autoRvrBvr = 'RVR';
-          if (data.case.customer_category === 'OFFICE') autoRvrBvr = 'BVR';
-          else if (data.case.customer_category === 'HOME') autoRvrBvr = 'RVR';
-          setForm(prev => ({
-            ...prev,
-            fir_reference_number: data.case.fir_no || '',
-            customer_name: data.case.customer_name || '',
-            address: data.case.address || '',
-            location: data.case.location || '',
-            contact_number: data.case.contact_number || '',
-            rvr_or_bvr: autoRvrBvr,
-          }));
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch(`/api/cases?id=${caseId}`).then(r => r.json()),
+      getExecutives(),
+    ]).then(([caseData, execData]) => {
+      if (caseData.case) {
+        setCaseInfo(caseData.case);
+        setSelectedExecId(caseData.case.executive_id || '');
+        let autoRvrBvr = 'RVR';
+        if (caseData.case.customer_category === 'OFFICE') autoRvrBvr = 'BVR';
+        else if (caseData.case.customer_category === 'HOME') autoRvrBvr = 'RVR';
+        setForm(prev => ({
+          ...prev,
+          fir_reference_number: caseData.case.fir_no || '',
+          customer_name: caseData.case.customer_name || '',
+          address: caseData.case.address || '',
+          location: caseData.case.location || '',
+          contact_number: caseData.case.contact_number || '',
+          rvr_or_bvr: autoRvrBvr,
+        }));
+      }
+      if (execData.executives) {
+        setExecutives(execData.executives);
+      }
+    }).catch(() => {}).finally(() => setLoading(false));
   }, [caseId]);
 
   const updateField = (field: string, value: unknown) => {
@@ -148,6 +153,10 @@ export default function AdminSubmitPage() {
 
   const handleSubmit = async () => {
     if (!caseInfo) return;
+    if (!selectedExecId) {
+      alert('Please select a field executive before submitting.');
+      return;
+    }
     setSubmitting(true);
     try {
       // Process OTHERS values
@@ -162,7 +171,7 @@ export default function AdminSubmitPage() {
 
       const reportData = {
         case_id: caseId,
-        executive_id: caseInfo.executive_id,
+        executive_id: selectedExecId,
         ...form,
         type_of_house: typeOfHouse,
         ownership_details: ownership,
@@ -235,6 +244,20 @@ export default function AdminSubmitPage() {
           <div><span className="text-[10px] uppercase text-slate-400 font-semibold block">Customer</span>{caseInfo.customer_name}</div>
           <div><span className="text-[10px] uppercase text-slate-400 font-semibold block">FIR No</span>{caseInfo.fir_no}</div>
           <div><span className="text-[10px] uppercase text-slate-400 font-semibold block">Address</span>{caseInfo.address}</div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-blue-200">
+          <label className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1 block">Field Executive *</label>
+          <select
+            value={selectedExecId}
+            onChange={e => setSelectedExecId(e.target.value)}
+            className="w-full max-w-xs px-3 py-2 rounded-lg border border-blue-300 bg-white text-sm font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none"
+          >
+            <option value="">— Select Executive —</option>
+            {executives.map(ex => (
+              <option key={ex.id} value={ex.id}>{ex.name} ({ex.id})</option>
+            ))}
+          </select>
+          {!selectedExecId && <p className="text-[10px] text-red-500 mt-1">Please select a field executive to submit this report under</p>}
         </div>
       </div>
 
@@ -511,7 +534,7 @@ export default function AdminSubmitPage() {
         <div className="flex items-center gap-4 pt-4 border-t border-slate-200">
           <button
             onClick={handleSubmit}
-            disabled={submitting || !form.customer_name}
+            disabled={submitting || !form.customer_name || !selectedExecId}
             className="px-8 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center gap-2"
           >
             {submitting ? (

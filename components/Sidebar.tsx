@@ -112,14 +112,9 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen w-[240px] bg-navy-900 text-white flex flex-col z-50">
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-white/10">
+      <div className="px-4 py-4 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-teal-600 flex items-center justify-center">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10 2L3 7v9a2 2 0 002 2h10a2 2 0 002-2V7l-7-5z" />
-              <path d="M8 18V12h4v6" />
-            </svg>
-          </div>
+          <img src="/kospl-logo.jpg" alt="KOSPL" className="h-10 w-auto rounded" />
           <div>
             <h1 className="font-display font-bold text-sm tracking-tight">Koteshwari</h1>
             <p className="text-[10px] text-slate-400 tracking-wider uppercase">Onfield Services</p>

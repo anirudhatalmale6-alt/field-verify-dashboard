@@ -194,12 +194,7 @@ export default function PDFPreviewPage() {
           <div className="relative flex items-start justify-between">
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg bg-teal-600 flex items-center justify-center">
-                  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M10 2L3 7v9a2 2 0 002 2h10a2 2 0 002-2V7l-7-5z" />
-                    <path d="M8 18V12h4v6" />
-                  </svg>
-                </div>
+                <img src="/kospl-logo.jpg" alt="KOSPL" className="h-12 w-auto rounded-lg bg-white p-1" />
                 <div>
                   <h1 className="text-xl font-display font-bold">Koteshwari Onfield Services</h1>
                   <p className="text-[10px] text-teal-400 tracking-widest uppercase">Field Investigation Report</p>

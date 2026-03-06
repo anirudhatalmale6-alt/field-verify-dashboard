@@ -36,12 +36,7 @@ export default function ExecutiveLayout({ children }: { children: React.ReactNod
       {/* Top Header */}
       <header className="bg-navy-900 text-white px-4 py-3 flex items-center justify-between safe-area-top sticky top-0 z-50">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center">
-            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10 2L3 7v9a2 2 0 002 2h10a2 2 0 002-2V7l-7-5z" />
-              <path d="M8 18V12h4v6" />
-            </svg>
-          </div>
+          <img src="/kospl-logo.jpg" alt="KOSPL" className="h-8 w-auto rounded bg-white p-0.5" />
           <div>
             <h1 className="text-sm font-bold">Koteshwari Onfield</h1>
             <p className="text-[9px] text-teal-400 tracking-wider uppercase">Field Executive</p>
