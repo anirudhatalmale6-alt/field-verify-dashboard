@@ -1144,10 +1144,31 @@ function DropdownField({ label, value, options, onChange }: {
 }
 
 function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [micAvailable, setMicAvailable] = useState<boolean | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+
+  // Check mic availability on mount
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+      setMicAvailable(true); // assume available, will verify on first use
+    } else {
+      setMicAvailable(false);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
 
   const uploadAndTranscribe = async (audioBlob: Blob, filename: string) => {
     setIsProcessing(true);
@@ -1194,21 +1215,90 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
     }
   };
 
-  // File input handler — native voice recorder on Android
+  // In-browser recording using MediaRecorder
+  const startRecording = async () => {
+    setErrorMsg('');
+    setStatusMsg('Requesting microphone...');
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : 'audio/mp4';
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      chunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        setIsRecording(false);
+        setRecordingTime(0);
+
+        if (chunksRef.current.length > 0) {
+          const blob = new Blob(chunksRef.current, { type: mimeType });
+          const ext = mimeType.includes('webm') ? 'webm' : 'mp4';
+          uploadAndTranscribe(blob, `recording.${ext}`);
+        }
+      };
+
+      recorder.onerror = () => {
+        stream.getTracks().forEach(t => t.stop());
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        setIsRecording(false);
+        setRecordingTime(0);
+        setErrorMsg('Recording failed. Try the upload option.');
+        setStatusMsg('');
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start(1000);
+      setIsRecording(true);
+      setStatusMsg('Recording... Speak in Marathi now');
+
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(t => {
+          if (t >= 59) {
+            if (mediaRecorderRef.current?.state === 'recording') {
+              mediaRecorderRef.current.stop();
+            }
+            return 0;
+          }
+          return t + 1;
+        });
+      }, 1000);
+    } catch {
+      // Mic permission denied or unavailable — mark mic as unavailable
+      setMicAvailable(false);
+      setStatusMsg('');
+      setErrorMsg('Microphone not available. Please use "Upload Audio" button below to record via your phone\'s voice recorder app.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    setStatusMsg('');
+  };
+
+  // File input handler
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     uploadAndTranscribe(file, file.name);
-    // Reset so same file can be selected again
     e.target.value = '';
   };
 
-  // Open the native voice recorder directly
-  const openRecorder = () => {
-    if (audioInputRef.current) {
-      audioInputRef.current.click();
-    }
-  };
+  const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
   return (
     <div>
@@ -1221,11 +1311,11 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
         placeholder="Type or tap mic button to speak in Marathi..."
       />
 
-      {/* Hidden file input — accept audio only, NO capture attr so Android shows Voice Recorder option */}
+      {/* Hidden file input — explicit audio extensions to prevent camera from showing */}
       <input
         ref={audioInputRef}
         type="file"
-        accept="audio/*"
+        accept=".mp3,.wav,.ogg,.m4a,.aac,.amr,.3gp,.wma,.flac,.opus,.webm"
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -1251,38 +1341,86 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
         </div>
       )}
 
-      {/* Record button — opens native voice recorder */}
-      <div className="mt-2">
+      {/* Recording timer */}
+      {isRecording && (
+        <div className="mt-1.5 px-3 py-2 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          <p className="text-xs text-red-600 font-medium">Recording: {formatTime(recordingTime)}</p>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex flex-col gap-2 mt-2">
+        {/* Primary: In-browser record (if mic available) */}
+        {micAvailable !== false && (
+          <button
+            type="button"
+            onClick={isRecording ? stopRecording : startRecording}
+            disabled={isProcessing}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+              isRecording
+                ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-200'
+                : isProcessing
+                  ? 'bg-slate-100 text-slate-400 border border-slate-200'
+                  : 'bg-teal-500 text-white active:bg-teal-600 shadow-md shadow-teal-200'
+            }`}
+          >
+            {isRecording ? (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                </svg>
+                Stop & Transcribe ({formatTime(recordingTime)})
+              </>
+            ) : isProcessing ? (
+              <>
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10" strokeOpacity="0.2" /><path d="M4 12a8 8 0 018-8" />
+                </svg>
+                Transcribing...
+              </>
+            ) : (
+              <>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                  <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+                Record Marathi Voice
+              </>
+            )}
+          </button>
+        )}
+
+        {/* Upload audio file — always visible, primary if mic not available */}
         <button
           type="button"
-          onClick={openRecorder}
-          disabled={isProcessing}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-            isProcessing
-              ? 'bg-slate-100 text-slate-400 border border-slate-200'
-              : 'bg-teal-500 text-white active:bg-teal-600 shadow-md shadow-teal-200'
-          }`}
+          onClick={() => audioInputRef.current?.click()}
+          disabled={isProcessing || isRecording}
+          className={`w-full flex items-center justify-center gap-2 px-4 rounded-xl font-semibold transition-all ${
+            micAvailable === false
+              ? 'py-3 text-sm bg-teal-500 text-white active:bg-teal-600 shadow-md shadow-teal-200'
+              : 'py-2.5 text-xs bg-slate-50 text-slate-600 border border-slate-200 active:bg-slate-100'
+          } disabled:opacity-40`}
         >
-          {isProcessing ? (
-            <>
-              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10" strokeOpacity="0.2" /><path d="M4 12a8 8 0 018-8" />
-              </svg>
-              Transcribing...
-            </>
-          ) : (
-            <>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
-                <path d="M19 10v2a7 7 0 01-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
-              </svg>
-              Speak in Marathi
-            </>
-          )}
+          <svg width={micAvailable === false ? "18" : "14"} height={micAvailable === false ? "18" : "14"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          {micAvailable === false ? 'Upload Voice Recording' : 'Upload Audio File'}
         </button>
-        <p className="text-[9px] text-slate-400 text-center mt-1.5">Tap → Select &quot;Voice Recorder&quot; → Record → Transcribes Marathi to English (v2)</p>
+
+        {micAvailable === false ? (
+          <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-[10px] text-blue-700 leading-relaxed">
+              <strong>How to use:</strong> Open your phone&apos;s Voice Recorder app → Record your Marathi speech → Save it → Come back here and tap &quot;Upload Voice Recording&quot; → Select the saved recording (v3)
+            </p>
+          </div>
+        ) : (
+          <p className="text-[9px] text-slate-400 text-center">Speak in Marathi → Auto-transcribes to English (v3)</p>
+        )}
       </div>
     </div>
   );
