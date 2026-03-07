@@ -1147,69 +1147,127 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
   const [isListening, setIsListening] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
   const [marathiText, setMarathiText] = useState('');
+  const [statusMsg, setStatusMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
+  const finalTranscriptRef = useRef('');
 
-  const startListening = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as any;
-    const SpeechRecognition = w.SpeechRecognition || w.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Speech recognition is not supported in this browser. Please use Chrome.');
+  const startListening = async () => {
+    setErrorMsg('');
+    setStatusMsg('');
+
+    // First, request microphone permission explicitly
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Got permission — stop the stream immediately (we only need the permission)
+      stream.getTracks().forEach(track => track.stop());
+    } catch {
+      setErrorMsg('Microphone access denied. Please allow microphone permission in your browser settings and try again.');
       return;
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const recognition = new SpeechRecognition() as any;
-    recognition.lang = 'mr-IN'; // Marathi
-    recognition.continuous = true;
-    recognition.interimResults = true;
+    const w = window as any;
+    const SpeechRecognition = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setErrorMsg('Speech recognition is not supported in this browser. Please use Google Chrome.');
+      return;
+    }
 
-    let finalTranscript = '';
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const recognition = new SpeechRecognition() as any;
+      recognition.lang = 'mr-IN'; // Marathi
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    recognition.onresult = (event: any) => {
-      let interim = '';
-      for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result[0]) {
-          if (result.isFinal) {
-            finalTranscript += result[0].transcript + ' ';
-          } else {
-            interim += result[0].transcript;
+      finalTranscriptRef.current = '';
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onresult = (event: any) => {
+        let interim = '';
+        let finalText = '';
+        for (let i = 0; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result[0]) {
+            if (result.isFinal) {
+              finalText += result[0].transcript + ' ';
+            } else {
+              interim += result[0].transcript;
+            }
           }
         }
-      }
-      setMarathiText((finalTranscript + interim).trim());
-    };
+        finalTranscriptRef.current = finalText;
+        setMarathiText((finalText + interim).trim());
+        setStatusMsg('');
+      };
 
-    recognition.onerror = () => {
-      setIsListening(false);
-    };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed') {
+          setErrorMsg('Microphone permission denied. Go to browser Settings → Site Settings → Microphone and allow for this site.');
+        } else if (event.error === 'no-speech') {
+          setStatusMsg('No speech detected. Try speaking closer to the mic.');
+          // Don't stop — let user keep trying
+          return;
+        } else if (event.error === 'network') {
+          setErrorMsg('Network error. Speech recognition requires internet connection.');
+        } else if (event.error === 'audio-capture') {
+          setErrorMsg('No microphone found. Please check your device microphone.');
+        } else {
+          setErrorMsg(`Speech error: ${event.error}. Please try again.`);
+        }
+        setIsListening(false);
+      };
 
-    recognition.onend = () => {
-      setIsListening(false);
-      // Auto-translate when recording stops
-      if (finalTranscript.trim()) {
-        translateAndAppend(finalTranscript.trim());
-      }
-    };
+      recognition.onstart = () => {
+        setStatusMsg('Listening... Speak in Marathi now');
+        setIsListening(true);
+      };
 
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
-    setMarathiText('');
+      recognition.onaudiostart = () => {
+        setStatusMsg('Hearing audio... Speak clearly');
+      };
+
+      recognition.onspeechstart = () => {
+        setStatusMsg('Detecting speech...');
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        setStatusMsg('');
+        // Auto-translate when recording ends
+        const transcript = finalTranscriptRef.current.trim();
+        if (transcript) {
+          translateAndAppend(transcript);
+        } else if (marathiText.trim()) {
+          // If we have interim text but no final, use that
+          translateAndAppend(marathiText.trim());
+        }
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+      setMarathiText('');
+    } catch (err) {
+      setErrorMsg(`Failed to start recording: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
   };
 
   const stopListening = () => {
     if (recognitionRef.current) {
-      recognitionRef.current.stop();
+      try { recognitionRef.current.stop(); } catch { /* ignore */ }
     }
     setIsListening(false);
+    setStatusMsg('');
   };
 
   const translateAndAppend = async (text: string) => {
     setIsTranslating(true);
+    setStatusMsg('Translating to English...');
     try {
       const res = await fetch('/api/translate', {
         method: 'POST',
@@ -1222,11 +1280,23 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
         const newValue = value ? value + '\n' + data.translated : data.translated;
         onChange(newValue);
         setMarathiText('');
+        setStatusMsg('Translation added!');
+        setTimeout(() => setStatusMsg(''), 2000);
+      } else {
+        // Translation returned empty — append original
+        const newValue = value ? value + '\n[mr] ' + text : '[mr] ' + text;
+        onChange(newValue);
+        setMarathiText('');
+        setStatusMsg('Added Marathi text (translation unavailable)');
+        setTimeout(() => setStatusMsg(''), 2000);
       }
     } catch {
       // If translation fails, append original Marathi text
-      const newValue = value ? value + '\n' + text : text;
+      const newValue = value ? value + '\n[mr] ' + text : '[mr] ' + text;
       onChange(newValue);
+      setMarathiText('');
+      setStatusMsg('Added Marathi text (translation failed)');
+      setTimeout(() => setStatusMsg(''), 2000);
     } finally {
       setIsTranslating(false);
     }
@@ -1243,10 +1313,24 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
         placeholder="Type or use mic to speak in Marathi..."
       />
 
+      {/* Error message */}
+      {errorMsg && (
+        <div className="mt-1.5 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-xs text-red-600 font-medium">{errorMsg}</p>
+        </div>
+      )}
+
+      {/* Status message */}
+      {statusMsg && !errorMsg && (
+        <div className="mt-1.5 px-3 py-2 bg-teal-50 border border-teal-200 rounded-lg">
+          <p className="text-xs text-teal-600 font-medium">{statusMsg}</p>
+        </div>
+      )}
+
       {/* Marathi live preview */}
       {marathiText && (
         <div className="mt-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-[9px] uppercase tracking-wider text-amber-500 font-semibold mb-0.5">Marathi (listening...)</p>
+          <p className="text-[9px] uppercase tracking-wider text-amber-500 font-semibold mb-0.5">मराठी (Marathi detected)</p>
           <p className="text-sm text-amber-800">{marathiText}</p>
         </div>
       )}
@@ -1291,7 +1375,7 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
             </>
           )}
         </button>
-        <p className="text-[9px] text-slate-400">Speaks in Marathi → Translates to English</p>
+        <p className="text-[9px] text-slate-400">Tap mic → Speak Marathi → Auto-translates to English</p>
       </div>
     </div>
   );
