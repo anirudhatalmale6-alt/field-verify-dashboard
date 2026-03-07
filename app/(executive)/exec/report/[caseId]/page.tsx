@@ -1149,19 +1149,49 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
   const [marathiText, setMarathiText] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [showPwaHelp, setShowPwaHelp] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
   const finalTranscriptRef = useRef('');
 
-  const startListening = () => {
+  // Detect if running as installed PWA (homescreen app)
+  const isPwa = typeof window !== 'undefined' && (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window.navigator as any).standalone === true
+  );
+
+  const startListening = async () => {
     setErrorMsg('');
     setStatusMsg('Initializing...');
+    setShowPwaHelp(false);
+
+    // Request microphone permission first
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+    } catch {
+      // Mic permission denied
+      if (isPwa) {
+        setShowPwaHelp(true);
+        setErrorMsg('Microphone blocked in app mode.');
+      } else {
+        setErrorMsg('Microphone permission denied. Please allow microphone access when prompted.');
+      }
+      setStatusMsg('');
+      return;
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any;
     const SpeechRecognition = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setErrorMsg('Speech recognition is not supported in this browser. Please use Google Chrome.');
+      if (isPwa) {
+        setShowPwaHelp(true);
+        setErrorMsg('Speech recognition not available in app mode.');
+      } else {
+        setErrorMsg('Speech recognition not supported. Please use Google Chrome.');
+      }
       setStatusMsg('');
       return;
     }
@@ -1169,7 +1199,7 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const recognition = new SpeechRecognition() as any;
-      recognition.lang = 'mr-IN'; // Marathi
+      recognition.lang = 'mr-IN';
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
@@ -1197,19 +1227,22 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
         if (event.error === 'not-allowed') {
-          setErrorMsg('Microphone permission needed. Tap the 🔒 icon in browser address bar → Permissions → Allow Microphone, then try again.');
+          if (isPwa) {
+            setShowPwaHelp(true);
+            setErrorMsg('Microphone blocked in app mode.');
+          } else {
+            setErrorMsg('Microphone denied. Please allow when prompted.');
+          }
         } else if (event.error === 'no-speech') {
-          setStatusMsg('No speech detected. Try speaking closer to the mic.');
-          // Don't stop — let user keep trying
+          setStatusMsg('No speech detected. Speak closer to mic.');
           return;
         } else if (event.error === 'network') {
-          setErrorMsg('Network error. Speech recognition requires internet connection.');
+          setErrorMsg('Network error. Check internet connection.');
         } else if (event.error === 'audio-capture') {
-          setErrorMsg('No microphone found. Please check your device microphone.');
+          setErrorMsg('No microphone found.');
         } else {
-          setErrorMsg(`Speech error: ${event.error}. Please try again.`);
+          setErrorMsg(`Error: ${event.error}. Try again.`);
         }
         setIsListening(false);
       };
@@ -1219,23 +1252,13 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
         setIsListening(true);
       };
 
-      recognition.onaudiostart = () => {
-        setStatusMsg('Hearing audio... Speak clearly');
-      };
-
-      recognition.onspeechstart = () => {
-        setStatusMsg('Detecting speech...');
-      };
-
       recognition.onend = () => {
         setIsListening(false);
         setStatusMsg('');
-        // Auto-translate when recording ends
         const transcript = finalTranscriptRef.current.trim();
         if (transcript) {
           translateAndAppend(transcript);
         } else if (marathiText.trim()) {
-          // If we have interim text but no final, use that
           translateAndAppend(marathiText.trim());
         }
       };
@@ -1243,8 +1266,14 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
       recognitionRef.current = recognition;
       recognition.start();
       setMarathiText('');
-    } catch (err) {
-      setErrorMsg(`Failed to start recording: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } catch {
+      if (isPwa) {
+        setShowPwaHelp(true);
+        setErrorMsg('Voice input failed in app mode.');
+      } else {
+        setErrorMsg('Failed to start. Try again.');
+      }
+      setStatusMsg('');
     }
   };
 
@@ -1254,6 +1283,18 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
     }
     setIsListening(false);
     setStatusMsg('');
+  };
+
+  const openInChrome = () => {
+    const url = window.location.href;
+    // Android intent to open in Chrome browser specifically
+    const chromeIntent = `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;package=com.android.chrome;end`;
+    // Try Chrome intent first, fall back to regular open
+    try {
+      window.location.href = chromeIntent;
+    } catch {
+      window.open(url, '_blank');
+    }
   };
 
   const translateAndAppend = async (text: string) => {
@@ -1274,7 +1315,6 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
         setStatusMsg('Translation added!');
         setTimeout(() => setStatusMsg(''), 2000);
       } else {
-        // Translation returned empty — append original
         const newValue = value ? value + '\n[mr] ' + text : '[mr] ' + text;
         onChange(newValue);
         setMarathiText('');
@@ -1282,7 +1322,6 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
         setTimeout(() => setStatusMsg(''), 2000);
       }
     } catch {
-      // If translation fails, append original Marathi text
       const newValue = value ? value + '\n[mr] ' + text : '[mr] ' + text;
       onChange(newValue);
       setMarathiText('');
@@ -1308,6 +1347,28 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
       {errorMsg && (
         <div className="mt-1.5 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-xs text-red-600 font-medium">{errorMsg}</p>
+        </div>
+      )}
+
+      {/* PWA help — show instructions to open in Chrome */}
+      {showPwaHelp && (
+        <div className="mt-1.5 px-3 py-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-xs text-amber-800 font-bold mb-2">Voice input works in Chrome browser:</p>
+          <button
+            type="button"
+            onClick={openInChrome}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl active:bg-blue-700 mb-2"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+            Open in Chrome Browser
+          </button>
+          <p className="text-[10px] text-amber-600 leading-relaxed">
+            OR go to Android Settings → Apps → find this app → Permissions → Microphone → Allow
+          </p>
         </div>
       )}
 
@@ -1366,7 +1427,7 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
             </>
           )}
         </button>
-        <p className="text-[9px] text-slate-400">Tap mic → Speak Marathi → Auto-translates to English</p>
+        <p className="text-[9px] text-slate-400">Speak Marathi → Auto-translates to English</p>
       </div>
     </div>
   );
