@@ -422,12 +422,12 @@ export default function PDFPreviewPage() {
           <section className="mb-4">
             <SectionTitle title={`Field Photos (${photos.length})`} />
             {photos.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="grid grid-cols-2 gap-3 mt-2">
                 {photos.map(photo => (
-                  <div key={photo.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200">
+                  <div key={photo.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 break-inside-avoid">
                     <div className="relative flex items-center justify-center bg-slate-100">
                       {photo.file_path ? (
-                        <img src={photo.file_path} alt={photo.label} className="w-full object-cover" style={{ maxHeight: '200px' }} />
+                        <img src={photo.file_path} alt={photo.label} className="w-full object-cover" style={{ height: '340px' }} />
                       ) : (
                         <svg className="text-slate-300 py-8" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21,15 16,10 5,21" />
@@ -435,18 +435,18 @@ export default function PDFPreviewPage() {
                       )}
                       {/* GPS + timestamp overlay on photo */}
                       {photo.file_path && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-1.5 pb-1 pt-3">
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 pb-1.5 pt-4">
                           <div className="flex items-center justify-between">
-                            <p className="text-[8px] text-white/90 font-medium">{formatDateTime(photo.captured_at)}</p>
-                            <p className="text-[8px] text-white/90 font-bold tracking-wide">KOSPL Field Verify</p>
+                            <p className="text-[9px] text-white/90 font-medium">{formatDateTime(photo.captured_at)}</p>
+                            <p className="text-[9px] text-white/90 font-bold tracking-wide">KOSPL Field Verify</p>
                           </div>
                           {photo.latitude && photo.longitude && (
-                            <p className="text-[8px] text-emerald-300 font-bold">GPS: {photo.latitude.toFixed(6)}, {photo.longitude.toFixed(6)}</p>
+                            <p className="text-[9px] text-emerald-300 font-bold">GPS: {photo.latitude.toFixed(6)}, {photo.longitude.toFixed(6)}</p>
                           )}
                         </div>
                       )}
                     </div>
-                    <div className="px-1.5 py-1">
+                    <div className="px-2 py-1">
                       <p className="text-[10px] font-semibold text-navy-900">{photo.label}</p>
                       <div className="flex items-center justify-between">
                         <p className="text-[8px] text-slate-400">{formatDateTime(photo.captured_at)}</p>
