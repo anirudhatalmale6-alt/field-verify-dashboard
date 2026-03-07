@@ -1157,7 +1157,7 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
 
   // Check mic availability on mount
   useEffect(() => {
-    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       setMicAvailable(true); // assume available, will verify on first use
     } else {
       setMicAvailable(false);
