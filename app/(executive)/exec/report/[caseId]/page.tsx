@@ -1153,25 +1153,16 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
   const recognitionRef = useRef<any>(null);
   const finalTranscriptRef = useRef('');
 
-  const startListening = async () => {
+  const startListening = () => {
     setErrorMsg('');
-    setStatusMsg('');
-
-    // First, request microphone permission explicitly
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Got permission — stop the stream immediately (we only need the permission)
-      stream.getTracks().forEach(track => track.stop());
-    } catch {
-      setErrorMsg('Microphone access denied. Please allow microphone permission in your browser settings and try again.');
-      return;
-    }
+    setStatusMsg('Initializing...');
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any;
     const SpeechRecognition = w.SpeechRecognition || w.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setErrorMsg('Speech recognition is not supported in this browser. Please use Google Chrome.');
+      setStatusMsg('');
       return;
     }
 
@@ -1208,7 +1199,7 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
       recognition.onerror = (event: any) => {
         console.error('Speech recognition error:', event.error);
         if (event.error === 'not-allowed') {
-          setErrorMsg('Microphone permission denied. Go to browser Settings → Site Settings → Microphone and allow for this site.');
+          setErrorMsg('Microphone permission needed. Tap the 🔒 icon in browser address bar → Permissions → Allow Microphone, then try again.');
         } else if (event.error === 'no-speech') {
           setStatusMsg('No speech detected. Try speaking closer to the mic.');
           // Don't stop — let user keep trying
