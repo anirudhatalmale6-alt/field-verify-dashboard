@@ -1282,7 +1282,7 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
             </>
           )}
         </button>
-        <p className="text-[9px] text-slate-400 text-center mt-1.5">Tap → Record voice → It will auto-transcribe Marathi to English</p>
+        <p className="text-[9px] text-slate-400 text-center mt-1.5">Tap → Select &quot;Voice Recorder&quot; → Record → Transcribes Marathi to English (v2)</p>
       </div>
     </div>
   );
