@@ -147,7 +147,7 @@ export default function PDFPreviewPage() {
     <div className="p-4 print:p-0">
       <style>{`
         @media print {
-          @page { margin: 8mm 10mm; size: A4; }
+          @page { margin: 6mm 6mm; size: A4; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           section { break-inside: avoid; }
         }
@@ -200,7 +200,7 @@ export default function PDFPreviewPage() {
       {/* PDF Content */}
       <div className="w-full bg-white shadow-xl rounded-2xl print:shadow-none print:rounded-none overflow-hidden">
         {/* Header Banner */}
-        <div className="bg-navy-900 text-white px-4 py-6 relative overflow-hidden">
+        <div className="bg-navy-900 text-white px-3 py-4 relative overflow-hidden">
           <div className="absolute top-[-40px] right-[-40px] w-[160px] h-[160px] rounded-full bg-teal-600/20" />
           <div className="absolute bottom-[-20px] left-[-30px] w-[100px] h-[100px] rounded-full bg-teal-600/10" />
 
@@ -232,7 +232,7 @@ export default function PDFPreviewPage() {
         </div>
 
         {/* Body */}
-        <div className="px-4 py-5 print:px-2">
+        <div className="px-3 py-4 print:px-1">
           <section className="mb-4">
             <SectionTitle title="Case Information" />
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
@@ -410,28 +410,50 @@ export default function PDFPreviewPage() {
           )}
 
           <section className="mb-4">
+            <SectionTitle title="Visit Details" />
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
+              <PDFField label="Field Executive" value={`${report.executive_name} (${report.executive_id})`} />
+              <PDFField label="Submitted by Maker" value={formatDateTime(report.submitted_at)} />
+              {report.reviewed_at && <PDFField label="Reviewed" value={formatDateTime(report.reviewed_at)} />}
+              <PDFField label="Submitted by Checker" value={report.approved_at ? formatDateTime(report.approved_at) : 'Pending'} />
+            </div>
+          </section>
+
+          <section className="mb-4">
             <SectionTitle title={`Field Photos (${photos.length})`} />
             {photos.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3 mt-2">
+              <div className="grid grid-cols-2 gap-2 mt-2">
                 {photos.map(photo => (
                   <div key={photo.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200">
-                    <div className="flex items-center justify-center bg-slate-100">
+                    <div className="relative flex items-center justify-center bg-slate-100">
                       {photo.file_path ? (
-                        <img src={photo.file_path} alt={photo.label} className="w-full h-auto object-contain" />
+                        <img src={photo.file_path} alt={photo.label} className="w-full object-cover" style={{ maxHeight: '200px' }} />
                       ) : (
-                        <svg className="text-slate-300 py-12" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg className="text-slate-300 py-8" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21,15 16,10 5,21" />
                         </svg>
                       )}
+                      {/* GPS + timestamp overlay on photo */}
+                      {photo.file_path && (
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-1.5 pb-1 pt-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-[8px] text-white/90 font-medium">{formatDateTime(photo.captured_at)}</p>
+                            <p className="text-[8px] text-white/90 font-bold tracking-wide">KOSPL Field Verify</p>
+                          </div>
+                          {photo.latitude && photo.longitude && (
+                            <p className="text-[8px] text-emerald-300 font-bold">GPS: {photo.latitude.toFixed(6)}, {photo.longitude.toFixed(6)}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="p-2">
-                      <p className="text-xs font-semibold text-navy-900">{photo.label}</p>
-                      <div className="flex items-center justify-between mt-0.5">
-                        <p className="text-[9px] text-slate-400">{formatDateTime(photo.captured_at)}</p>
+                    <div className="px-1.5 py-1">
+                      <p className="text-[10px] font-semibold text-navy-900">{photo.label}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[8px] text-slate-400">{formatDateTime(photo.captured_at)}</p>
                         {photo.latitude && photo.longitude ? (
-                          <p className="text-[9px] text-emerald-600 font-bold">GPS: {photo.latitude.toFixed(6)}, {photo.longitude.toFixed(6)}</p>
+                          <p className="text-[8px] text-emerald-600 font-bold">GPS: {photo.latitude.toFixed(6)}, {photo.longitude.toFixed(6)}</p>
                         ) : (
-                          <p className="text-[9px] text-red-400 font-medium">No GPS</p>
+                          <p className="text-[8px] text-red-400 font-medium">No GPS</p>
                         )}
                       </div>
                     </div>
@@ -441,16 +463,6 @@ export default function PDFPreviewPage() {
             ) : (
               <p className="text-xs text-slate-400 mt-2">No photos captured yet.</p>
             )}
-          </section>
-
-          <section className="mb-4">
-            <SectionTitle title="Visit Details" />
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
-              <PDFField label="Field Executive" value={`${report.executive_name} (${report.executive_id})`} />
-              <PDFField label="Submitted by Maker" value={formatDateTime(report.submitted_at)} />
-              {report.reviewed_at && <PDFField label="Reviewed" value={formatDateTime(report.reviewed_at)} />}
-              <PDFField label="Submitted by Checker" value={report.approved_at ? formatDateTime(report.approved_at) : 'Pending'} />
-            </div>
           </section>
 
           <div className="border-t border-slate-200 pt-4 mt-4">
