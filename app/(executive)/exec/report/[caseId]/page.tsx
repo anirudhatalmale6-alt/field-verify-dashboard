@@ -878,7 +878,7 @@ export default function VerificationFormPage() {
       {currentSectionKey === 'tpc_remarks' && (
         <div className="space-y-3">
           <FormField label="TPC / Neighbour Name" value={form.tpc_neighbour_name} onChange={v => updateForm('tpc_neighbour_name', v)} />
-          <FormField label="Special Remarks" value={form.special_remarks} onChange={v => updateForm('special_remarks', v)} multiline rows={4} />
+          <VoiceRemarkField value={form.special_remarks} onChange={v => updateForm('special_remarks', v)} />
         </div>
       )}
 
@@ -1139,6 +1139,160 @@ function DropdownField({ label, value, options, onChange }: {
           <option key={opt} value={opt}>{opt}</option>
         ))}
       </select>
+    </div>
+  );
+}
+
+function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [isListening, setIsListening] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [marathiText, setMarathiText] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
+
+  const startListening = () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    const SpeechRecognition = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser. Please use Chrome.');
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const recognition = new SpeechRecognition() as any;
+    recognition.lang = 'mr-IN'; // Marathi
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    let finalTranscript = '';
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result[0]) {
+          if (result.isFinal) {
+            finalTranscript += result[0].transcript + ' ';
+          } else {
+            interim += result[0].transcript;
+          }
+        }
+      }
+      setMarathiText((finalTranscript + interim).trim());
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      // Auto-translate when recording stops
+      if (finalTranscript.trim()) {
+        translateAndAppend(finalTranscript.trim());
+      }
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+    setMarathiText('');
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+  };
+
+  const translateAndAppend = async (text: string) => {
+    setIsTranslating(true);
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ text, from: 'mr', to: 'en' }),
+      });
+      const data = await res.json();
+      if (data.translated) {
+        const newValue = value ? value + '\n' + data.translated : data.translated;
+        onChange(newValue);
+        setMarathiText('');
+      }
+    } catch {
+      // If translation fails, append original Marathi text
+      const newValue = value ? value + '\n' + text : text;
+      onChange(newValue);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  return (
+    <div>
+      <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Special Remarks</label>
+      <textarea
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        rows={4}
+        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+        placeholder="Type or use mic to speak in Marathi..."
+      />
+
+      {/* Marathi live preview */}
+      {marathiText && (
+        <div className="mt-1.5 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <p className="text-[9px] uppercase tracking-wider text-amber-500 font-semibold mb-0.5">Marathi (listening...)</p>
+          <p className="text-sm text-amber-800">{marathiText}</p>
+        </div>
+      )}
+
+      {/* Translating indicator */}
+      {isTranslating && (
+        <div className="mt-1.5 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
+          <svg className="animate-spin h-3.5 w-3.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10" strokeOpacity="0.2" /><path d="M4 12a8 8 0 018-8" />
+          </svg>
+          <p className="text-xs text-blue-600 font-medium">Translating to English...</p>
+        </div>
+      )}
+
+      {/* Mic button */}
+      <div className="flex items-center gap-2 mt-2">
+        <button
+          type="button"
+          onClick={isListening ? stopListening : startListening}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+            isListening
+              ? 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-200'
+              : 'bg-teal-50 text-teal-700 border border-teal-200 active:bg-teal-100'
+          }`}
+        >
+          {isListening ? (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+              Stop Recording
+            </>
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+              Speak in Marathi
+            </>
+          )}
+        </button>
+        <p className="text-[9px] text-slate-400">Speaks in Marathi → Translates to English</p>
+      </div>
     </div>
   );
 }
