@@ -1270,7 +1270,7 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
       }, 1000);
     } catch {
       setStatusMsg('');
-      setErrorMsg('Microphone blocked. Please allow microphone permission, or use "Upload Audio File" below.');
+      setErrorMsg('MIC_BLOCKED');
     }
   };
 
@@ -1299,6 +1299,21 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
+  // Open Chrome site settings for this domain
+  const openMicSettings = () => {
+    // Try to open Chrome site settings directly
+    const url = window.location.origin;
+    try {
+      // Android Chrome intent to open site settings
+      window.location.href = `intent://settings/content/microphone#Intent;scheme=chrome;package=com.android.chrome;end`;
+    } catch {
+      // Fallback: copy URL and show manual instructions
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url);
+      }
+    }
+  };
+
   return (
     <div>
       <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Special Remarks</label>
@@ -1318,8 +1333,56 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
         className="hidden"
       />
 
-      {/* Error message */}
-      {errorMsg && (
+      {/* Mic blocked — show detailed fix instructions */}
+      {errorMsg === 'MIC_BLOCKED' && (
+        <div className="mt-2 px-3 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+          <p className="text-xs text-amber-800 font-bold mb-2">Microphone is blocked. Enable it:</p>
+          <div className="space-y-2 text-[11px] text-amber-900 leading-relaxed">
+            <div className="flex gap-2">
+              <span className="font-bold text-amber-600 shrink-0">Step 1:</span>
+              <span>Open <strong>Chrome browser</strong> (not the app)</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-bold text-amber-600 shrink-0">Step 2:</span>
+              <span>Go to <strong>app.kospl.in</strong></span>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-bold text-amber-600 shrink-0">Step 3:</span>
+              <span>Tap the <strong>lock icon</strong> (left of URL bar)</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-bold text-amber-600 shrink-0">Step 4:</span>
+              <span>Tap <strong>Permissions</strong> → Turn ON <strong>Microphone</strong></span>
+            </div>
+            <div className="flex gap-2">
+              <span className="font-bold text-amber-600 shrink-0">Step 5:</span>
+              <span>Come back to this app and tap &quot;Record&quot; again</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={openMicSettings}
+            className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 text-white text-xs font-semibold rounded-xl active:bg-amber-700"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+            Open Chrome Settings
+          </button>
+          <button
+            type="button"
+            onClick={() => { setErrorMsg(''); }}
+            className="w-full mt-1.5 text-[10px] text-amber-600 underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Other errors */}
+      {errorMsg && errorMsg !== 'MIC_BLOCKED' && (
         <div className="mt-1.5 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-xs text-red-600 font-medium">{errorMsg}</p>
         </div>
@@ -1401,14 +1464,9 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
             <polyline points="17 8 12 3 7 8" />
             <line x1="12" y1="3" x2="12" y2="15" />
           </svg>
-          Upload Audio File (if mic not working)
+          Upload Audio File
         </button>
-
-        <div className="px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg">
-          <p className="text-[10px] text-blue-700 leading-relaxed">
-            <strong>If mic button doesn&apos;t work:</strong> Open your phone&apos;s Voice Recorder → Record Marathi speech → Save → Tap &quot;Upload Audio File&quot; → Browse to Recordings folder → Select the file (v4)
-          </p>
-        </div>
+        <p className="text-[9px] text-slate-400 text-center">Marathi voice → English text (v5)</p>
       </div>
     </div>
   );
