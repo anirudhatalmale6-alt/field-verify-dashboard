@@ -448,14 +448,6 @@ export default function PDFPreviewPage() {
                     </div>
                     <div className="px-2 py-1">
                       <p className="text-[10px] font-semibold text-navy-900">{photo.label}</p>
-                      <div className="flex items-center justify-between">
-                        <p className="text-[8px] text-slate-400">{formatDateTime(photo.captured_at)}</p>
-                        {photo.latitude && photo.longitude ? (
-                          <p className="text-[8px] text-emerald-600 font-bold">GPS: {photo.latitude.toFixed(6)}, {photo.longitude.toFixed(6)}</p>
-                        ) : (
-                          <p className="text-[8px] text-red-400 font-medium">No GPS</p>
-                        )}
-                      </div>
                     </div>
                   </div>
                 ))}
