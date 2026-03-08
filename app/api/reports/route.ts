@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     let query = `
       SELECT r.*,
-        c.bank_name, c.fir_no, c.applicant, c.purpose_of_loan, c.finance_amount, c.customer_category,
+        c.bank_name, c.fir_no, c.reference_number, c.applicant, c.purpose_of_loan, c.finance_amount, c.customer_category,
         u.name as executive_name, u.avatar as executive_avatar,
         (SELECT COUNT(*) FROM photos p WHERE p.report_id = r.id) as photo_count
       FROM reports r

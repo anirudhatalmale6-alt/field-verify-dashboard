@@ -15,7 +15,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const report = db.prepare(`
       SELECT r.*,
-        c.bank_name, c.fir_no, c.applicant, c.purpose_of_loan, c.finance_amount, c.customer_category,
+        c.bank_name, c.fir_no, c.reference_number, c.applicant, c.purpose_of_loan, c.finance_amount, c.customer_category,
         u.name as executive_name, u.avatar as executive_avatar, u.phone as executive_phone, u.region as executive_region
       FROM reports r
       JOIN cases c ON r.case_id = c.id

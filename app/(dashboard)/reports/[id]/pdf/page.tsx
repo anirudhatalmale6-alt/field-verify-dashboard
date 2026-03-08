@@ -56,6 +56,7 @@ interface ReportDetail {
   negative_reason: string | null;
   bank_name: string;
   fir_no: string;
+  reference_number: string | null;
   applicant: string;
   purpose_of_loan: string;
   finance_amount: string;
@@ -238,6 +239,7 @@ export default function PDFPreviewPage() {
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
               <PDFField label="Bank Name" value={report.bank_name} />
               <PDFField label="FIR No" value={report.fir_no} />
+              {report.reference_number && <PDFField label="Reference No" value={report.reference_number} />}
               <PDFField label="Applicant" value={report.applicant || 'N/A'} />
               <PDFField label="Purpose of Loan" value={report.purpose_of_loan} />
               <PDFField label="Finance Amount" value={report.finance_amount || 'N/A'} />

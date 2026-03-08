@@ -597,8 +597,9 @@ export default function ReportDetailPage() {
               <div className="space-y-3">
                 <SidebarField label="Bank" value={report.bank_name} />
                 <SidebarField label="FIR No" value={report.fir_no} />
+                {report.reference_number && <SidebarField label="Ref No" value={report.reference_number} />}
                 <SidebarField label="Purpose" value={report.purpose_of_loan} />
-                <SidebarField label="Finance Amount" value={report.finance_amount || 'N/A'} />
+                <SidebarField label="Amount" value={report.finance_amount || 'N/A'} />
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-slate-500">Category</span>
                   <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${getCategoryColor(report.customer_category)}`}>

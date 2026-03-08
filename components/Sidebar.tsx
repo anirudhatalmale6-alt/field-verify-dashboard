@@ -175,7 +175,7 @@ export default function Sidebar() {
     : 'AU';
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-[240px] bg-navy-900 text-white flex flex-col z-50">
+    <aside className="fixed left-0 top-0 h-screen w-[240px] bg-navy-900 text-white flex flex-col z-50 print:hidden">
       {/* Logo */}
       <div className="px-4 py-4 border-b border-white/10">
         <div className="flex items-center gap-3">

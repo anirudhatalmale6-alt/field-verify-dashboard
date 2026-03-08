@@ -241,12 +241,11 @@ export default function CasesPage() {
                 <th className="w-10 px-4 py-3">
                   <input type="checkbox" checked={selectedCases.length === cases.length && cases.length > 0} onChange={toggleAll} className="rounded border-slate-300 text-teal-600 focus:ring-teal-500" />
                 </th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">FIR No</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">FIR / Ref No</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Bank</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Customer</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Address</th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Purpose</th>
-                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Amount</th>
+                <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Purpose / Amt</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Category</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Executive</th>
                 <th className="text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 px-4 py-3">Status</th>
@@ -259,7 +258,10 @@ export default function CasesPage() {
                   <td className="w-10 px-4 py-3">
                     <input type="checkbox" checked={selectedCases.includes(c.id)} onChange={() => toggleSelect(c.id)} className="rounded border-slate-300 text-teal-600 focus:ring-teal-500" />
                   </td>
-                  <td className="px-4 py-3"><span className="text-sm font-mono font-semibold text-navy-900">{c.fir_no}</span></td>
+                  <td className="px-4 py-3">
+                    <span className="text-sm font-mono font-semibold text-navy-900">{c.fir_no}</span>
+                    {c.reference_number && <p className="text-[10px] text-slate-400 mt-0.5">{c.reference_number}</p>}
+                  </td>
                   <td className="px-4 py-3"><span className="text-sm text-slate-700">{c.bank_name}</span></td>
                   <td className="px-4 py-3">
                     <p className="text-sm font-medium text-navy-900">{c.customer_name}</p>
@@ -269,8 +271,10 @@ export default function CasesPage() {
                     <p className="text-xs text-slate-600 leading-relaxed">{c.address || 'N/A'}</p>
                     <p className="text-[10px] text-slate-400">{c.location}</p>
                   </td>
-                  <td className="px-4 py-3"><span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md whitespace-nowrap">{c.purpose_of_loan}</span></td>
-                  <td className="px-4 py-3"><span className="text-sm text-slate-700">{c.finance_amount}</span></td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md whitespace-nowrap">{c.purpose_of_loan}</span>
+                    {c.finance_amount && <p className="text-[10px] text-slate-500 mt-0.5">{c.finance_amount}</p>}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border status-badge ${getCategoryColor(c.customer_category)}`}>
                       {c.customer_category}
