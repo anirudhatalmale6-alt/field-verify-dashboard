@@ -90,7 +90,6 @@ export default function DashboardPage() {
   const [notifSound, setNotifSound] = useState(true);
   const [autoMisTime, setAutoMisTime] = useState('');
   const [autoMisEnabled, setAutoMisEnabled] = useState(false);
-  const [autoMisLastRun, setAutoMisLastRun] = useState('');
   const lastCheckRef = useRef<string>('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -148,10 +147,8 @@ export default function DashboardPage() {
     // Load auto-MIS settings from localStorage
     const savedTime = localStorage.getItem('autoMisTime') || '';
     const savedEnabled = localStorage.getItem('autoMisEnabled') === 'true';
-    const savedLastRun = localStorage.getItem('autoMisLastRun') || '';
     setAutoMisTime(savedTime);
     setAutoMisEnabled(savedEnabled);
-    setAutoMisLastRun(savedLastRun);
 
     // Auto-MIS timer: check every 30 seconds if it's time to download
     const misInterval = setInterval(() => {
@@ -167,7 +164,6 @@ export default function DashboardPage() {
       // Check if current time matches scheduled time (within 1-minute window) and hasn't run today
       if (now.getHours() === hh && now.getMinutes() === mm && lastRun !== todayKey) {
         localStorage.setItem('autoMisLastRun', todayKey);
-        setAutoMisLastRun(todayKey);
         // Trigger daily MIS download
         const link = document.createElement('a');
         link.href = `/api/reports/export?type=daily`;
