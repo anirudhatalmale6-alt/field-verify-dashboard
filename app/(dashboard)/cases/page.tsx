@@ -8,6 +8,7 @@ interface CaseRow {
   id: string;
   bank_name: string;
   fir_no: string;
+  reference_number: string | null;
   applicant: string;
   purpose_of_loan: string;
   finance_amount: string;
