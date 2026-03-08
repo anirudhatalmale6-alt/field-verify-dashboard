@@ -224,6 +224,14 @@ function initializeSchema(db: Database.Database) {
     db.exec("ALTER TABLE cases ADD COLUMN district TEXT");
   }
 
+  // Migration: add reference_number and pincode to cases
+  if (!caseCols.find(c => c.name === 'reference_number')) {
+    db.exec("ALTER TABLE cases ADD COLUMN reference_number TEXT");
+  }
+  if (!caseCols.find(c => c.name === 'pincode')) {
+    db.exec("ALTER TABLE cases ADD COLUMN pincode TEXT");
+  }
+
   // Migration: add approved_by to reports (checker name)
   if (!reportCols.find(c => c.name === 'approved_by')) {
     db.exec("ALTER TABLE reports ADD COLUMN approved_by TEXT");

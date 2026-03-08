@@ -18,8 +18,19 @@ const COLUMN_ALIASES: Record<string, string[]> = {
   executive_name: ['EXECUTIVE NAME', 'EXECUTIVE', 'FIELD EXECUTIVE', 'FE NAME', 'ASSIGNED TO', 'EXECUTIVE_NAME', 'FE', 'AGENT', 'AGENT NAME', 'VERIFIER', 'VERIFIER NAME', 'ALLOCATED TO'],
   customer_category: ['CUSTOMER CATEGORY', 'CATEGORY', 'TYPE', 'VERIFICATION TYPE', 'CUSTOMER_CATEGORY', 'FI TYPE', 'CASE TYPE', 'RVR/BVR', 'RVR BVR', 'VISIT TYPE'],
   allocation_status: ['STATUS', 'ALLOCATION STATUS', 'FI STATUS', 'CASE STATUS', 'ALLOC STATUS'],
-  district: ['DISTRICT', 'DIST', 'CITY', 'TOWN'],
+  district: ['DISTRICT', 'DIST'],
+  reference_number: ['REFERENCE NUMBER', 'REFERENCE NO', 'REF NUMBER', 'BANK REFERENCE', 'BANK REF', 'BANK REFERENCE NUMBER', 'BANK REF NO'],
+  pincode: ['PINCODE', 'PIN CODE', 'PIN', 'ZIP', 'ZIP CODE', 'POSTAL CODE'],
+  ticket_size: ['TICKET SIZE', 'TICKET_SIZE'],
 };
+
+// Extract 6-digit Indian pincode from address string
+function extractPincode(address: string): string {
+  if (!address) return '';
+  // Match 6-digit codes starting with common Indian pin prefixes
+  const match = address.match(/\b([1-9]\d{5})\b/);
+  return match ? match[1] : '';
+}
 
 function findColumnValue(row: Record<string, unknown>, dbField: string): string {
   const aliases = COLUMN_ALIASES[dbField] || [];
@@ -118,6 +129,14 @@ export async function POST(request: NextRequest) {
       for (const dbField of Object.keys(COLUMN_ALIASES)) {
         mapped[dbField] = findColumnValue(row, dbField);
       }
+      // Use ticket_size as finance_amount if finance_amount is empty
+      if (!mapped.finance_amount && mapped.ticket_size) {
+        mapped.finance_amount = mapped.ticket_size;
+      }
+      // Auto-extract pincode from address if not provided in Excel
+      if (!mapped.pincode && mapped.address) {
+        mapped.pincode = extractPincode(mapped.address);
+      }
       return mapped;
     });
 
@@ -129,8 +148,8 @@ export async function POST(request: NextRequest) {
     const allExecs = db.prepare('SELECT id, name FROM users WHERE role = ? AND is_active = 1').all('executive') as { id: string; name: string }[];
 
     const insert = db.prepare(`
-      INSERT INTO cases (id, bank_name, date_and_time, fir_no, applicant, purpose_of_loan, finance_amount, customer_name, address, location, contact_number, executive_id, customer_category, status, import_batch, district)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO cases (id, bank_name, date_and_time, fir_no, applicant, purpose_of_loan, finance_amount, customer_name, address, location, contact_number, executive_id, customer_category, status, import_batch, district, reference_number, pincode)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const auditInsert = db.prepare(`INSERT INTO audit_trail (id, case_id, action, performed_by, details) VALUES (?, ?, ?, ?, ?)`);
@@ -152,7 +171,7 @@ export async function POST(request: NextRequest) {
       UPDATE cases SET bank_name = ?, date_and_time = ?, applicant = ?, purpose_of_loan = ?, finance_amount = ?,
         customer_name = ?, address = ?, location = ?, contact_number = ?, executive_id = COALESCE(?, executive_id),
         customer_category = ?, status = CASE WHEN ? IS NOT NULL THEN 'assigned' ELSE status END,
-        district = COALESCE(?, district)
+        district = COALESCE(?, district), reference_number = COALESCE(?, reference_number), pincode = COALESCE(?, pincode)
       WHERE id = ?
     `);
 
@@ -270,7 +289,9 @@ export async function POST(request: NextRequest) {
               execId,       // COALESCE(?, executive_id) — keeps old exec if new is null
               category,
               execId,       // For CASE WHEN ? IS NOT NULL — sets status to 'assigned' if exec provided
-              c.district || null, // COALESCE(?, district) — keeps old district if new is null
+              c.district || null, // COALESCE(?, district)
+              c.reference_number || null, // COALESCE(?, reference_number)
+              c.pincode || null, // COALESCE(?, pincode)
               existingCase.id,
             );
 
@@ -305,6 +326,8 @@ export async function POST(request: NextRequest) {
               execId ? 'assigned' : 'unassigned',
               batchId,
               c.district || null,
+              c.reference_number || null,
+              c.pincode || null,
             );
 
             // Log audit if auto-assigned

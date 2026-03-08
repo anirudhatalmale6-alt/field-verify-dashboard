@@ -147,7 +147,7 @@ export default function PDFPreviewPage() {
     <div className="p-4 print:p-0">
       <style>{`
         @media print {
-          @page { margin: 6mm 6mm; size: A4; }
+          @page { margin: 2mm 2mm; size: A4; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           section { break-inside: avoid; }
         }
@@ -200,7 +200,7 @@ export default function PDFPreviewPage() {
       {/* PDF Content */}
       <div className="w-full bg-white shadow-xl rounded-2xl print:shadow-none print:rounded-none overflow-hidden">
         {/* Header Banner */}
-        <div className="bg-navy-900 text-white px-3 py-4 relative overflow-hidden">
+        <div className="bg-navy-900 text-white px-3 py-4 print:px-2 relative overflow-hidden">
           <div className="absolute top-[-40px] right-[-40px] w-[160px] h-[160px] rounded-full bg-teal-600/20" />
           <div className="absolute bottom-[-20px] left-[-30px] w-[100px] h-[100px] rounded-full bg-teal-600/10" />
 
@@ -232,7 +232,7 @@ export default function PDFPreviewPage() {
         </div>
 
         {/* Body */}
-        <div className="px-3 py-4 print:px-1">
+        <div className="px-3 py-4 print:px-0">
           <section className="mb-4">
             <SectionTitle title="Case Information" />
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-2">
