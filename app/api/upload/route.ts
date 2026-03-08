@@ -18,6 +18,7 @@ const COLUMN_ALIASES: Record<string, string[]> = {
   executive_name: ['EXECUTIVE NAME', 'EXECUTIVE', 'FIELD EXECUTIVE', 'FE NAME', 'ASSIGNED TO', 'EXECUTIVE_NAME', 'FE', 'AGENT', 'AGENT NAME', 'VERIFIER', 'VERIFIER NAME', 'ALLOCATED TO'],
   customer_category: ['CUSTOMER CATEGORY', 'CATEGORY', 'TYPE', 'VERIFICATION TYPE', 'CUSTOMER_CATEGORY', 'FI TYPE', 'CASE TYPE', 'RVR/BVR', 'RVR BVR', 'VISIT TYPE'],
   allocation_status: ['STATUS', 'ALLOCATION STATUS', 'FI STATUS', 'CASE STATUS', 'ALLOC STATUS'],
+  district: ['DISTRICT', 'DIST', 'CITY', 'TOWN'],
 };
 
 function findColumnValue(row: Record<string, unknown>, dbField: string): string {
@@ -128,8 +129,8 @@ export async function POST(request: NextRequest) {
     const allExecs = db.prepare('SELECT id, name FROM users WHERE role = ? AND is_active = 1').all('executive') as { id: string; name: string }[];
 
     const insert = db.prepare(`
-      INSERT INTO cases (id, bank_name, date_and_time, fir_no, applicant, purpose_of_loan, finance_amount, customer_name, address, location, contact_number, executive_id, customer_category, status, import_batch)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO cases (id, bank_name, date_and_time, fir_no, applicant, purpose_of_loan, finance_amount, customer_name, address, location, contact_number, executive_id, customer_category, status, import_batch, district)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const auditInsert = db.prepare(`INSERT INTO audit_trail (id, case_id, action, performed_by, details) VALUES (?, ?, ?, ?, ?)`);
@@ -150,7 +151,8 @@ export async function POST(request: NextRequest) {
     const updateCase = db.prepare(`
       UPDATE cases SET bank_name = ?, date_and_time = ?, applicant = ?, purpose_of_loan = ?, finance_amount = ?,
         customer_name = ?, address = ?, location = ?, contact_number = ?, executive_id = COALESCE(?, executive_id),
-        customer_category = ?, status = CASE WHEN ? IS NOT NULL THEN 'assigned' ELSE status END
+        customer_category = ?, status = CASE WHEN ? IS NOT NULL THEN 'assigned' ELSE status END,
+        district = COALESCE(?, district)
       WHERE id = ?
     `);
 
@@ -268,6 +270,7 @@ export async function POST(request: NextRequest) {
               execId,       // COALESCE(?, executive_id) — keeps old exec if new is null
               category,
               execId,       // For CASE WHEN ? IS NOT NULL — sets status to 'assigned' if exec provided
+              c.district || null, // COALESCE(?, district) — keeps old district if new is null
               existingCase.id,
             );
 
@@ -301,6 +304,7 @@ export async function POST(request: NextRequest) {
               category,
               execId ? 'assigned' : 'unassigned',
               batchId,
+              c.district || null,
             );
 
             // Log audit if auto-assigned

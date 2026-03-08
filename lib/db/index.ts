@@ -219,6 +219,16 @@ function initializeSchema(db: Database.Database) {
     db.exec("ALTER TABLE cases ADD COLUMN longitude REAL");
   }
 
+  // Migration: add district to cases
+  if (!caseCols.find(c => c.name === 'district')) {
+    db.exec("ALTER TABLE cases ADD COLUMN district TEXT");
+  }
+
+  // Migration: add approved_by to reports (checker name)
+  if (!reportCols.find(c => c.name === 'approved_by')) {
+    db.exec("ALTER TABLE reports ADD COLUMN approved_by TEXT");
+  }
+
   // Seed default admin if no users exist
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {

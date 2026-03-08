@@ -88,6 +88,9 @@ export default function DashboardPage() {
   const [purgeResult, setPurgeResult] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<{ id: string; customer_name: string; fir_no: string; executive_name: string; submitted_at: string }[]>([]);
   const [notifSound, setNotifSound] = useState(true);
+  const [autoMisTime, setAutoMisTime] = useState('');
+  const [autoMisEnabled, setAutoMisEnabled] = useState(false);
+  const [autoMisLastRun, setAutoMisLastRun] = useState('');
   const lastCheckRef = useRef<string>('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -141,7 +144,41 @@ export default function DashboardPage() {
     }).catch(() => {});
 
     const interval = setInterval(checkNotifications, 15000); // Poll every 15 seconds
-    return () => clearInterval(interval);
+
+    // Load auto-MIS settings from localStorage
+    const savedTime = localStorage.getItem('autoMisTime') || '';
+    const savedEnabled = localStorage.getItem('autoMisEnabled') === 'true';
+    const savedLastRun = localStorage.getItem('autoMisLastRun') || '';
+    setAutoMisTime(savedTime);
+    setAutoMisEnabled(savedEnabled);
+    setAutoMisLastRun(savedLastRun);
+
+    // Auto-MIS timer: check every 30 seconds if it's time to download
+    const misInterval = setInterval(() => {
+      const enabled = localStorage.getItem('autoMisEnabled') === 'true';
+      const scheduledTime = localStorage.getItem('autoMisTime') || '';
+      if (!enabled || !scheduledTime) return;
+
+      const now = new Date();
+      const [hh, mm] = scheduledTime.split(':').map(Number);
+      const todayKey = now.toISOString().split('T')[0];
+      const lastRun = localStorage.getItem('autoMisLastRun') || '';
+
+      // Check if current time matches scheduled time (within 1-minute window) and hasn't run today
+      if (now.getHours() === hh && now.getMinutes() === mm && lastRun !== todayKey) {
+        localStorage.setItem('autoMisLastRun', todayKey);
+        setAutoMisLastRun(todayKey);
+        // Trigger daily MIS download
+        const link = document.createElement('a');
+        link.href = `/api/reports/export?type=daily`;
+        link.download = `KOSPL_MIS_Daily_${todayKey}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    }, 30000);
+
+    return () => { clearInterval(interval); clearInterval(misInterval); };
   }, [checkNotifications]);
 
   if (loading) {
@@ -218,6 +255,35 @@ export default function DashboardPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7,10 12,15 17,10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
             Full MIS
           </a>
+          <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-slate-200">
+            <input
+              type="time"
+              value={autoMisTime}
+              onChange={(e) => {
+                setAutoMisTime(e.target.value);
+                localStorage.setItem('autoMisTime', e.target.value);
+              }}
+              className="px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 w-[90px]"
+              title="Set auto-download time for Daily MIS"
+            />
+            <button
+              onClick={() => {
+                const newVal = !autoMisEnabled;
+                setAutoMisEnabled(newVal);
+                localStorage.setItem('autoMisEnabled', String(newVal));
+                if (newVal && !autoMisTime) {
+                  alert('Please set a time first');
+                  setAutoMisEnabled(false);
+                  localStorage.setItem('autoMisEnabled', 'false');
+                }
+              }}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 ${autoMisEnabled ? 'bg-purple-100 border border-purple-300 text-purple-700' : 'bg-slate-100 border border-slate-200 text-slate-500 hover:bg-slate-200'}`}
+              title={autoMisEnabled ? `Auto MIS ON — Daily MIS downloads at ${autoMisTime}` : 'Enable auto-download of Daily MIS'}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" /></svg>
+              {autoMisEnabled ? 'Auto ON' : 'Auto'}
+            </button>
+          </div>
         </div>
       </div>
 

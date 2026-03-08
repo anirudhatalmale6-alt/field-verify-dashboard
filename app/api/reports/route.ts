@@ -134,6 +134,11 @@ export async function POST(request: NextRequest) {
       body.company_name_board || '', body.tpc_neighbour_name || '', body.special_remarks || ''
     );
 
+    // Auto-copy special_remarks to internal_notes
+    if (body.special_remarks) {
+      db.prepare(`UPDATE reports SET internal_notes = ? WHERE id = ?`).run(body.special_remarks, reportId);
+    }
+
     // Update case status
     db.prepare(`UPDATE cases SET status = 'submitted', updated_at = datetime('now') WHERE id = ?`).run(body.case_id);
 

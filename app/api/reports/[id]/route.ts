@@ -77,6 +77,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       }
       if (body.status === 'approved') {
         updates.push(`approved_at = datetime('now')`);
+        updates.push(`approved_by = '${user.name.replace(/'/g, "''")}'`);
         // Update case status too
         const reportCase = db.prepare('SELECT case_id FROM reports WHERE id = ?').get(id) as { case_id: string };
         db.prepare(`UPDATE cases SET status = 'approved', updated_at = datetime('now') WHERE id = ?`).run(reportCase.case_id);
