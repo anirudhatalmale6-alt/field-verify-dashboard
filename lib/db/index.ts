@@ -232,6 +232,15 @@ function initializeSchema(db: Database.Database) {
     db.exec("ALTER TABLE cases ADD COLUMN pincode TEXT");
   }
 
+  // Pincodes reference table for VLOOKUP (from FI Allocation PINCODES sheet)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pincodes (
+      pincode TEXT PRIMARY KEY,
+      sub_area TEXT,
+      district TEXT
+    )
+  `);
+
   // Migration: add approved_by to reports (checker name)
   if (!reportCols.find(c => c.name === 'approved_by')) {
     db.exec("ALTER TABLE reports ADD COLUMN approved_by TEXT");

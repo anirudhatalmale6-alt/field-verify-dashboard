@@ -81,6 +81,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Could not read the file. Please ensure it is a valid Excel (.xlsx/.xls) or CSV file. Error: ' + (parseErr as Error).message }, { status: 400 });
     }
 
+    // Parse PINCODES sheet if present — store in DB for VLOOKUP
+    const pincodeSheetName = workbook.SheetNames.find(sn => sn.toUpperCase() === 'PINCODES' || sn.toUpperCase() === 'PINCODE');
+    if (pincodeSheetName) {
+      const pinSheet = workbook.Sheets[pincodeSheetName];
+      const pinData = XLSX.utils.sheet_to_json(pinSheet, { defval: '' }) as Record<string, unknown>[];
+      if (pinData.length > 0) {
+        const pinDb = getDb();
+        const upsertPin = pinDb.prepare('INSERT OR REPLACE INTO pincodes (pincode, sub_area, district) VALUES (?, ?, ?)');
+        const pinTransaction = pinDb.transaction(() => {
+          for (const row of pinData) {
+            const pin = String(Object.values(row)[0] || '').trim();
+            const subArea = String(Object.values(row)[1] || '').trim();
+            const district = String(Object.values(row)[2] || '').trim();
+            if (pin && /^\d{6}$/.test(pin)) {
+              upsertPin.run(pin, subArea, district);
+            }
+          }
+        });
+        pinTransaction();
+        console.log(`Upload: Loaded ${pinData.length} pincodes from ${pincodeSheetName} sheet`);
+      }
+    }
+
     // Smart sheet selection: try to find a sheet with matching columns
     // Priority: sheet named MAIN > sheet with most matching columns > first sheet
     let bestSheet = workbook.SheetNames[0];
@@ -123,6 +146,14 @@ export async function POST(request: NextRequest) {
     console.log('Upload: Detected columns:', detectedColumns);
     console.log('Upload: Total rows:', rawData.length);
 
+    // Pre-load pincode lookup table from DB
+    const db = getDb();
+    const pincodeLookup = new Map<string, { sub_area: string; district: string }>();
+    (db.prepare('SELECT pincode, sub_area, district FROM pincodes').all() as { pincode: string; sub_area: string; district: string }[]).forEach(p => {
+      pincodeLookup.set(p.pincode, { sub_area: p.sub_area, district: p.district });
+    });
+    console.log(`Upload: Pincode lookup table has ${pincodeLookup.size} entries`);
+
     // Map Excel columns to DB fields using flexible matching
     const mappedCases = rawData.map(row => {
       const mapped: Record<string, string> = {};
@@ -137,11 +168,17 @@ export async function POST(request: NextRequest) {
       if (!mapped.pincode && mapped.address) {
         mapped.pincode = extractPincode(mapped.address);
       }
+      // VLOOKUP: pincode → district → set as location
+      if (mapped.pincode) {
+        const lookup = pincodeLookup.get(mapped.pincode);
+        if (lookup && lookup.district) {
+          mapped.location = lookup.district;
+        }
+      }
       return mapped;
     });
 
     // Insert into database
-    const db = getDb();
     const batchId = generateId('BATCH');
 
     // Pre-load all executives for matching
