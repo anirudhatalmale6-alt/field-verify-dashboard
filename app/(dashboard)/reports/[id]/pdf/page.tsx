@@ -429,7 +429,7 @@ export default function PDFPreviewPage() {
                   <div key={photo.id} className="bg-slate-50 rounded-lg overflow-hidden border border-slate-200 break-inside-avoid">
                     <div className="relative flex items-center justify-center bg-slate-100">
                       {photo.file_path ? (
-                        <img src={photo.file_path} alt={photo.label} className="w-full object-cover" style={{ height: '340px' }} />
+                        <img src={photo.file_path} alt={photo.label} className="w-full object-cover" style={{ height: '240px' }} />
                       ) : (
                         <svg className="text-slate-300 py-8" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21,15 16,10 5,21" />
