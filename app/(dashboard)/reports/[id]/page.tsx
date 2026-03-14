@@ -805,6 +805,42 @@ export default function ReportDetailPage() {
                         GPS
                       </div>
                     )}
+                    {/* Copy button */}
+                    {photo.file_path && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(photo.file_path);
+                            const blob = await response.blob();
+                            // Try clipboard API first
+                            if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+                              const item = new ClipboardItem({ 'image/png': blob.type.includes('png') ? blob : new Blob([await (await fetch(photo.file_path)).arrayBuffer()], { type: 'image/png' }) });
+                              await navigator.clipboard.write([item]);
+                              alert('Photo copied to clipboard!');
+                            } else {
+                              // Fallback: download the image
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `${photo.label || 'photo'}.jpg`;
+                              a.click();
+                              URL.revokeObjectURL(url);
+                            }
+                          } catch {
+                            // Fallback: open in new tab
+                            window.open(photo.file_path, '_blank');
+                          }
+                        }}
+                        className="absolute bottom-2 right-2 w-7 h-7 bg-teal-600 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Copy / Download photo"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                      </button>
+                    )}
                     {/* Delete button (admin) */}
                     <button
                       onClick={async () => {

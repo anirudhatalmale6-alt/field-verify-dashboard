@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { submitReport, uploadPhotos } from '@/lib/api-client';
+import { queueSubmission, isOnline } from '@/lib/offline-queue';
 
 interface CaseInfo {
   id: string;
@@ -462,25 +463,53 @@ export default function VerificationFormPage() {
         latitude: currentCoords?.lat || null,
         longitude: currentCoords?.lng || null,
       };
-      const result = await submitReport(reportData);
 
-      if (photos.length > 0 && result.id) {
-        // Use latest GPS coords for photos that were captured without GPS
-        const finalCoords = photos.map(p => ({
-          lat: p.lat || currentCoords?.lat || 0,
-          lng: p.lng || currentCoords?.lng || 0,
-        }));
-        await uploadPhotos(
-          result.id,
-          photos.map(p => p.file),
-          photos.map(p => p.label),
-          finalCoords
-        );
+      // Check if online — try direct submission first
+      const online = await isOnline();
+      if (online) {
+        try {
+          const result = await submitReport(reportData);
+
+          if (photos.length > 0 && result.id) {
+            const finalCoords = photos.map(p => ({
+              lat: p.lat || currentCoords?.lat || 0,
+              lng: p.lng || currentCoords?.lng || 0,
+            }));
+            await uploadPhotos(
+              result.id,
+              photos.map(p => p.file),
+              photos.map(p => p.label),
+              finalCoords
+            );
+          }
+
+          // Clear saved form data after successful submission
+          try { sessionStorage.removeItem(storageKey); } catch { /* ignore */ }
+          alert('Report submitted successfully!');
+          router.push('/exec/cases');
+          return;
+        } catch (err) {
+          // If online submission fails due to network, fall through to offline queue
+          const msg = (err as Error).message || '';
+          if (!msg.includes('fetch') && !msg.includes('network') && !msg.includes('Failed to fetch')) {
+            throw err; // Re-throw non-network errors (e.g. duplicate, validation)
+          }
+          console.warn('Online submission failed, queueing offline:', msg);
+        }
       }
 
-      // Clear saved form data after successful submission
+      // Offline or network error — queue for later sync
+      const photoData = photos.map(p => ({
+        file: p.file,
+        label: p.label,
+        lat: p.lat || currentCoords?.lat || 0,
+        lng: p.lng || currentCoords?.lng || 0,
+      }));
+      await queueSubmission(caseId, form.customer_name, reportData, photoData);
+
+      // Clear saved form data
       try { sessionStorage.removeItem(storageKey); } catch { /* ignore */ }
-      alert('Report submitted successfully!');
+      alert('No network detected. Your report has been saved offline and will be automatically submitted when you have a stable connection. You can check the status on your cases page.');
       router.push('/exec/cases');
     } catch (err) {
       alert('Failed to submit: ' + (err as Error).message);
@@ -730,11 +759,10 @@ export default function VerificationFormPage() {
                   onClick={() => {
                     updateForm('ownership_details', opt);
                     if (opt === 'DOOR LOCK') {
-                      // Auto-fill TPC and remarks for Door Lock
+                      // Auto-fill remarks for Door Lock (TPC left empty for manual entry)
                       setForm(prev => ({
                         ...prev,
                         ownership_details: opt,
-                        tpc_neighbour_name: prev.tpc_neighbour_name || 'Door Locked — No TPC available',
                         special_remarks: prev.special_remarks
                           ? (prev.special_remarks.includes('DOOR LOCK') ? prev.special_remarks : prev.special_remarks + '\nDOOR LOCK — Premises was locked during visit.')
                           : 'DOOR LOCK — Premises was locked during visit.'

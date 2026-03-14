@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { getCases } from '@/lib/api-client';
 import { getStatusColor, getStatusLabel } from '@/lib/utils';
+import { getPendingSubmissions, syncPendingSubmissions } from '@/lib/offline-queue';
 
 interface CaseRow {
   id: string;
@@ -31,6 +32,56 @@ export default function ExecCasesPage() {
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const geocodeTriggered = useRef(false);
+
+  // Offline queue state
+  const [offlineCount, setOfflineCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+
+  // Check for offline queued submissions and auto-sync
+  useEffect(() => {
+    const checkOffline = async () => {
+      try {
+        const items = await getPendingSubmissions();
+        setOfflineCount(items.length);
+        if (items.length > 0 && navigator.onLine) {
+          setSyncing(true);
+          const result = await syncPendingSubmissions();
+          if (result.synced > 0) {
+            const remaining = await getPendingSubmissions();
+            setOfflineCount(remaining.length);
+            fetchCases();
+          }
+          setSyncing(false);
+        }
+      } catch { /* ignore */ }
+    };
+    checkOffline();
+
+    // Also sync when coming back online
+    const handleOnline = () => checkOffline();
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleManualSync = async () => {
+    setSyncing(true);
+    try {
+      const result = await syncPendingSubmissions();
+      const remaining = await getPendingSubmissions();
+      setOfflineCount(remaining.length);
+      if (result.synced > 0) {
+        alert(`${result.synced} report(s) synced successfully!`);
+        fetchCases();
+      } else if (result.failed > 0) {
+        alert('Sync failed. Please check your network and try again.');
+      }
+    } catch {
+      alert('Sync failed. Please try again.');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Push-back modal state
   const [pushbackCaseId, setPushbackCaseId] = useState<string | null>(null);
@@ -176,6 +227,29 @@ export default function ExecCasesPage() {
           <p className="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Submitted</p>
         </div>
       </div>
+
+      {/* Offline queue banner */}
+      {offlineCount > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <div>
+              <p className="text-xs font-semibold text-amber-800">{offlineCount} report(s) saved offline</p>
+              <p className="text-[10px] text-amber-600">Will auto-sync when network is available</p>
+            </div>
+          </div>
+          <button
+            onClick={handleManualSync}
+            disabled={syncing}
+            className="px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg disabled:opacity-50"
+          >
+            {syncing ? 'Syncing...' : 'Sync Now'}
+          </button>
+        </div>
+      )}
 
       {/* Location sorting indicator */}
       {userLat !== null && (

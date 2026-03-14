@@ -7,11 +7,12 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: [
+      { url: "/favicon.ico", type: "image/x-icon", sizes: "48x48" },
       { url: "/kospl-logo.jpg", type: "image/jpeg" },
       { url: "/icon-192x192.png", type: "image/png", sizes: "192x192" },
     ],
     apple: "/apple-touch-icon.png",
-    shortcut: "/kospl-logo.jpg",
+    shortcut: "/favicon.ico",
   },
   themeColor: "#0d9488",
 };
