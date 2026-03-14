@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.ENABLE_HTTPS === 'true',
       sameSite: 'lax',
-      maxAge: 86400,
+      maxAge: 604800, // 7 days
       path: '/',
     });
 
