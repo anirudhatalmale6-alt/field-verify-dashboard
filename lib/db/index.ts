@@ -246,6 +246,14 @@ function initializeSchema(db: Database.Database) {
     db.exec("ALTER TABLE reports ADD COLUMN approved_by TEXT");
   }
 
+  // Migration: add pushback_reason and admin_instructions to cases
+  if (!caseCols.find(c => c.name === 'pushback_reason')) {
+    db.exec("ALTER TABLE cases ADD COLUMN pushback_reason TEXT");
+  }
+  if (!caseCols.find(c => c.name === 'admin_instructions')) {
+    db.exec("ALTER TABLE cases ADD COLUMN admin_instructions TEXT");
+  }
+
   // Seed default admin if no users exist
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number };
   if (userCount.count === 0) {

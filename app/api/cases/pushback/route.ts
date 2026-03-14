@@ -27,9 +27,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Not your case' }, { status: 403 });
     }
 
-    // Push back: unassign the case and set to unassigned
-    db.prepare('UPDATE cases SET executive_id = NULL, status = ?, updated_at = datetime(?) WHERE id = ?')
-      .run('unassigned', new Date().toISOString(), case_id);
+    // Push back: unassign the case, store reason, and set to unassigned
+    db.prepare('UPDATE cases SET executive_id = NULL, status = ?, pushback_reason = ?, updated_at = datetime(?) WHERE id = ?')
+      .run('unassigned', reason, new Date().toISOString(), case_id);
 
     // Log audit trail
     db.prepare(`INSERT INTO audit_trail (id, case_id, action, performed_by, details, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?, ?)`)

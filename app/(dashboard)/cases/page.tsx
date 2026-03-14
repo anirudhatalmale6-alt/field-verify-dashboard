@@ -20,6 +20,8 @@ interface CaseRow {
   executive_name: string | null;
   customer_category: string;
   status: string;
+  pushback_reason: string | null;
+  admin_instructions: string | null;
 }
 
 interface Executive {
@@ -71,6 +73,8 @@ export default function CasesPage() {
   const [selectedCases, setSelectedCases] = useState<string[]>([]);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [instructionCase, setInstructionCase] = useState<CaseRow | null>(null);
+  const [instructionText, setInstructionText] = useState('');
 
   const loadCases = useCallback(async () => {
     try {
@@ -158,8 +162,8 @@ export default function CasesPage() {
     <div className="p-6 lg:p-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-display font-bold text-navy-900">Case Management</h1>
-          <p className="text-sm text-slate-500 mt-1">{statusCounts.all || 0} total cases imported &middot; Assign and track verification cases</p>
+          <h1 className="text-2xl font-display font-bold text-navy-900">Pending Cases</h1>
+          <p className="text-sm text-slate-500 mt-1">{statusCounts.all || 0} total cases &middot; Assign and track verification cases</p>
         </div>
         <div className="flex items-center gap-2">
           {selectedCases.length > 0 && (
@@ -290,16 +294,37 @@ export default function CasesPage() {
                   </td>
                   <td className="px-4 py-3">
                     <span className={`status-badge ${getStatusColor(c.status)}`}>{getStatusLabel(c.status)}</span>
+                    {c.pushback_reason && (
+                      <p className="text-[10px] text-red-600 mt-0.5" title={c.pushback_reason}>
+                        Pushback: {c.pushback_reason.length > 40 ? c.pushback_reason.slice(0, 40) + '...' : c.pushback_reason}
+                      </p>
+                    )}
+                    {c.admin_instructions && (
+                      <p className="text-[10px] text-blue-600 mt-0.5" title={c.admin_instructions}>
+                        Instructions set
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-3">
-                    {(c.status === 'assigned' || c.status === 'unassigned' || c.status === 'in_progress') && (
-                      <Link href={`/admin-submit/${c.id}`} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-[10px] font-semibold text-teal-700 hover:bg-teal-100 transition-colors whitespace-nowrap">
+                    <div className="flex gap-1">
+                      {(c.status === 'assigned' || c.status === 'unassigned' || c.status === 'in_progress') && (
+                        <Link href={`/admin-submit/${c.id}`} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-[10px] font-semibold text-teal-700 hover:bg-teal-100 transition-colors whitespace-nowrap">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                          </svg>
+                          Submit
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => { setInstructionCase(c); setInstructionText(c.admin_instructions || ''); }}
+                        className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-blue-50 border border-blue-200 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 transition-colors whitespace-nowrap"
+                        title="Add instructions for executive"
+                      >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
                         </svg>
-                        Submit Report
-                      </Link>
-                    )}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -314,6 +339,52 @@ export default function CasesPage() {
           </div>
         )}
       </div>
+
+      {/* Instructions Modal */}
+      {instructionCase && (
+        <div className="fixed inset-0 bg-navy-900/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 fade-in">
+            <h3 className="font-display font-bold text-navy-900 text-lg mb-1">Instructions for Executive</h3>
+            <p className="text-sm text-slate-500 mb-4">Case: {instructionCase.fir_no} — {instructionCase.customer_name}</p>
+            <textarea
+              value={instructionText}
+              onChange={(e) => setInstructionText(e.target.value)}
+              rows={4}
+              placeholder="Enter instructions for the field executive (e.g., collect additional documents, take specific photos)..."
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none resize-vertical"
+            />
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/cases', {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ case_id: instructionCase.id, admin_instructions: instructionText }),
+                      credentials: 'include',
+                    });
+                    if (res.ok) {
+                      setInstructionCase(null);
+                      loadCases();
+                    } else {
+                      alert('Failed to save instructions');
+                    }
+                  } catch { alert('Save failed'); }
+                }}
+                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                Save Instructions
+              </button>
+              <button
+                onClick={() => setInstructionCase(null)}
+                className="px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-lg hover:border-slate-300 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Assign Modal */}
       {showAssignModal && (

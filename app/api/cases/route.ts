@@ -206,3 +206,30 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// PATCH /api/cases — update admin_instructions for a case
+export async function PATCH(request: NextRequest) {
+  try {
+    const user = await getAuthUser();
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin only' }, { status: 403 });
+    }
+
+    const { case_id, admin_instructions } = await request.json();
+    if (!case_id) {
+      return NextResponse.json({ error: 'case_id required' }, { status: 400 });
+    }
+
+    const db = getDb();
+    db.prepare('UPDATE cases SET admin_instructions = ?, updated_at = datetime(?) WHERE id = ?')
+      .run(admin_instructions || '', new Date().toISOString(), case_id);
+
+    db.prepare(`INSERT INTO audit_trail (id, case_id, action, performed_by, details) VALUES (?, ?, ?, ?, ?)`)
+      .run(generateId('AUD'), case_id, 'Instructions Updated', user.name, `Admin instructions: ${admin_instructions || '(cleared)'}`);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Case update error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

@@ -20,6 +20,7 @@ interface CaseRow {
   status: string;
   imported_at: string;
   distance?: number;
+  admin_instructions?: string | null;
 }
 
 export default function ExecCasesPage() {
@@ -323,6 +324,16 @@ export default function ExecCasesPage() {
                         {c.customer_category}
                       </span>
                     </div>
+
+                    {/* Admin Instructions */}
+                    {c.admin_instructions && (
+                      <div className="flex items-start gap-2 mb-2 px-2.5 py-2 rounded-lg bg-amber-50 border border-amber-200">
+                        <svg className="flex-shrink-0 mt-0.5 text-amber-600" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                        </svg>
+                        <p className="text-xs text-amber-800 leading-snug"><span className="font-bold">Admin: </span>{c.admin_instructions}</p>
+                      </div>
+                    )}
 
                     {/* Contact + Navigate buttons */}
                     <div className="flex items-center gap-2 mt-2 flex-wrap">

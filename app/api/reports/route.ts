@@ -42,9 +42,9 @@ export async function GET(request: NextRequest) {
       params.push(category);
     }
     if (search) {
-      query += ` AND (r.customer_name LIKE ? OR c.fir_no LIKE ? OR c.bank_name LIKE ? OR r.location LIKE ? OR u.name LIKE ?)`;
+      query += ` AND (LOWER(r.customer_name) LIKE LOWER(?) OR c.fir_no LIKE ? OR LOWER(c.bank_name) LIKE LOWER(?) OR LOWER(r.location) LIKE LOWER(?) OR LOWER(u.name) LIKE LOWER(?) OR c.reference_number LIKE ?)`;
       const s = `%${search}%`;
-      params.push(s, s, s, s, s);
+      params.push(s, s, s, s, s, s);
     }
 
     query += ` ORDER BY r.submitted_at DESC`;
@@ -92,6 +92,22 @@ export async function POST(request: NextRequest) {
     // Allow executive or admin to submit
     if (user.role === 'executive' && caseRow.executive_id !== user.id) {
       return NextResponse.json({ error: 'This case is not assigned to you' }, { status: 403 });
+    }
+
+    // Prevent duplicate submission — check if a report already exists for this case
+    const existingReport = db.prepare('SELECT id, status FROM reports WHERE case_id = ?').get(body.case_id) as { id: string; status: string } | undefined;
+    if (existingReport) {
+      if (existingReport.status === 'approved') {
+        return NextResponse.json({ error: 'This case already has an approved report. Duplicate submission not allowed.' }, { status: 409 });
+      }
+      if (existingReport.status !== 'rejected' && user.role !== 'admin') {
+        return NextResponse.json({ error: 'A report already exists for this case. Contact admin to allow re-submission.' }, { status: 409 });
+      }
+      // If rejected or admin override, delete the old report to allow re-submission
+      if (existingReport.status === 'rejected' || user.role === 'admin') {
+        db.prepare('DELETE FROM photos WHERE report_id = ?').run(existingReport.id);
+        db.prepare('DELETE FROM reports WHERE id = ?').run(existingReport.id);
+      }
     }
 
     const reportId = generateId('RPT');

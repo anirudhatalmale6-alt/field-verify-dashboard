@@ -266,9 +266,18 @@ export default function ReportDetailPage() {
         <div className="flex items-center gap-2">
           {report.status !== 'approved' && (
             <button
-              onClick={() => handleStatusChange('approved')}
-              disabled={updating}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50"
+              onClick={() => {
+                if (!report.verification_result) {
+                  alert('Please select a Verification Result (Positive / Negative / Refer to Credit) before submitting.');
+                  return;
+                }
+                handleStatusChange('approved');
+              }}
+              disabled={updating || !report.verification_result}
+              title={!report.verification_result ? 'Select Verification Result first' : ''}
+              className={`px-4 py-2 rounded-xl text-white text-sm font-semibold transition-colors flex items-center gap-2 disabled:opacity-50 ${
+                report.verification_result ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-gray-400 cursor-not-allowed'
+              }`}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20,6 9,17 4,12" /></svg>
               {updating ? 'Updating...' : 'Submitted by Checker'}
@@ -468,6 +477,38 @@ export default function ReportDetailPage() {
                 </p>
               </div>
             </FormSection>
+
+            {/* Inline Photos for Checker Review */}
+            {photos.length > 0 && (
+              <FormSection title={`Field Photos (${photos.length})`} icon="clipboard">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="relative rounded-lg overflow-hidden border border-slate-200 group">
+                      {photo.file_path ? (
+                        <img
+                          src={photo.file_path}
+                          alt={photo.label}
+                          className="w-full h-auto object-contain cursor-pointer"
+                          onContextMenu={(e) => e.preventDefault()}
+                          onClick={() => {
+                            // Open full-size in new tab
+                            window.open(photo.file_path, '_blank');
+                          }}
+                        />
+                      ) : (
+                        <div className="h-32 bg-slate-100 flex items-center justify-center text-xs text-slate-400">No image</div>
+                      )}
+                      {photo.latitude && photo.longitude && (
+                        <div className="absolute top-1 right-1 bg-emerald-600/90 text-white text-[8px] px-1.5 py-0.5 rounded">GPS</div>
+                      )}
+                      <div className="p-2 bg-white">
+                        <p className="text-xs font-medium text-navy-900">{photo.label}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </FormSection>
+            )}
 
             <FormSection title="Summary Remarks" icon="message">
               {editingSummary ? (
@@ -692,6 +733,48 @@ export default function ReportDetailPage() {
       {/* Photos Tab */}
       {activeTab === 'photos' && (
         <div>
+          {/* Admin Upload Button */}
+          <div className="mb-4 flex gap-2">
+            <label className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium transition-colors cursor-pointer flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17,8 12,3 7,8" /><line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Upload Photos
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={async (e) => {
+                  const files = e.target.files;
+                  if (!files || files.length === 0) return;
+                  const formData = new FormData();
+                  for (let i = 0; i < files.length; i++) {
+                    formData.append('photos', files[i]);
+                    formData.append('labels', `Admin Upload ${i + 1}`);
+                    formData.append('latitudes', '');
+                    formData.append('longitudes', '');
+                  }
+                  try {
+                    const res = await fetch(`/api/reports/${report.id}/photos`, {
+                      method: 'POST',
+                      body: formData,
+                      credentials: 'include',
+                    });
+                    if (res.ok) {
+                      await fetchData();
+                    } else {
+                      alert('Failed to upload photos');
+                    }
+                  } catch {
+                    alert('Upload failed');
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </label>
+          </div>
+
           {photos.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 shadow-sm">
               <svg className="mx-auto mb-3 text-slate-300" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -702,10 +785,10 @@ export default function ReportDetailPage() {
           ) : (
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {photos.map((photo) => (
-                <div key={photo.id} className="photo-card bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div key={photo.id} className="photo-card bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden group relative">
                   <div className="bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center relative">
                     {photo.file_path ? (
-                      <img src={photo.file_path} alt={photo.label} className="w-full h-auto object-contain" />
+                      <img src={photo.file_path} alt={photo.label} className="w-full h-auto object-contain" crossOrigin="anonymous" />
                     ) : (
                       <div className="relative text-center py-12">
                         <svg className="mx-auto mb-1 text-slate-400" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -722,6 +805,26 @@ export default function ReportDetailPage() {
                         GPS
                       </div>
                     )}
+                    {/* Delete button (admin) */}
+                    <button
+                      onClick={async () => {
+                        if (!confirm('Delete this photo?')) return;
+                        try {
+                          const res = await fetch(`/api/reports/${report.id}/photos`, {
+                            method: 'DELETE',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ photo_id: photo.id }),
+                            credentials: 'include',
+                          });
+                          if (res.ok) await fetchData();
+                          else alert('Failed to delete photo');
+                        } catch { alert('Delete failed'); }
+                      }}
+                      className="absolute top-2 left-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete photo"
+                    >
+                      ×
+                    </button>
                   </div>
                   <div className="p-3">
                     <p className="text-sm font-medium text-navy-900">{photo.label}</p>

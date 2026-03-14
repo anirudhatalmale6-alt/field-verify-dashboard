@@ -142,6 +142,10 @@ export async function GET(request: NextRequest) {
           r.rvr_or_bvr, r.special_remarks, r.submitted_at, r.approved_at,
           r.latitude, r.longitude,
           r.summary_remarks, r.verification_result, r.approved_by,
+          r.area_of_house, r.type_of_house, r.ownership_details, r.staying_years,
+          r.family_members, r.earning_members, r.customer_occ_category,
+          r.company_name, r.designation, r.business_name_address, r.nature_of_business,
+          r.tpc_neighbour_name,
           (SELECT COUNT(*) FROM photos p WHERE p.report_id = r.id) as photo_count
         FROM cases c
         LEFT JOIN users u ON c.executive_id = u.id
@@ -190,6 +194,16 @@ export async function GET(request: NextRequest) {
           'Address Confirmed': c.report_id ? (c.address_confirmed ? 'YES' : 'NO') : '',
           'Person Met': c.person_met || '',
           'RVR/BVR': c.rvr_or_bvr || '',
+          'Area': c.area_of_house || '',
+          'House Type': c.type_of_house || '',
+          'Ownership': c.ownership_details || '',
+          'Staying Years': c.staying_years || '',
+          'Family Members': c.family_members || '',
+          'Earning Members': c.earning_members || '',
+          'Occupation': c.customer_occ_category || '',
+          'Company': c.company_name || c.business_name_address || '',
+          'Designation': c.designation || c.nature_of_business || '',
+          'TPC/Neighbour': c.tpc_neighbour_name || '',
           'GPS': c.latitude && c.longitude ? `${c.latitude},${c.longitude}` : '',
           'Photos': c.photo_count || 0,
           'Imported At': c.imported_at || '',

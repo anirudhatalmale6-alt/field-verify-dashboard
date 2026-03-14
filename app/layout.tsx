@@ -6,8 +6,12 @@ export const metadata: Metadata = {
   description: "Field verification management by Koteshwari Onfield Services Pvt Ltd",
   manifest: "/manifest.json",
   icons: {
-    icon: "/icon-192x192.png",
+    icon: [
+      { url: "/kospl-logo.jpg", type: "image/jpeg" },
+      { url: "/icon-192x192.png", type: "image/png", sizes: "192x192" },
+    ],
     apple: "/apple-touch-icon.png",
+    shortcut: "/kospl-logo.jpg",
   },
   themeColor: "#0d9488",
 };

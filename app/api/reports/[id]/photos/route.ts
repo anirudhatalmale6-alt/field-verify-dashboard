@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb, generateId } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, unlink } from 'fs/promises';
 import path from 'path';
 import piexif from 'piexifjs';
+import sharp from 'sharp';
 
 // Convert decimal degrees to EXIF GPS format (degrees, minutes, seconds as rationals)
 function decimalToDMS(dd: number): [[number, number], [number, number], [number, number]] {
@@ -154,6 +155,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         buffer = embedGpsExif(buffer, lat, lng) as Buffer;
       }
 
+      // Compress image to reduce file size (max 1200px wide, 70% quality JPEG)
+      try {
+        const compressed = await sharp(buffer)
+          .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 70 })
+          .toBuffer();
+        buffer = compressed as Buffer;
+      } catch (compressErr) {
+        console.error('Image compression error (non-fatal):', compressErr);
+        // Keep original if compression fails
+      }
+
       // Save file
       await writeFile(path.join(uploadDir, filename), buffer);
 
@@ -198,6 +211,46 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ photos });
   } catch (error) {
     console.error('Photos list error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// DELETE /api/reports/[id]/photos — delete a specific photo (admin only)
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await getAuthUser();
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin only' }, { status: 403 });
+    }
+
+    const { id: reportId } = await params;
+    const { photo_id } = await request.json();
+
+    if (!photo_id) {
+      return NextResponse.json({ error: 'photo_id required' }, { status: 400 });
+    }
+
+    const db = getDb();
+    const photo = db.prepare('SELECT * FROM photos WHERE id = ? AND report_id = ?').get(photo_id, reportId) as { id: string; filename: string } | undefined;
+
+    if (!photo) {
+      return NextResponse.json({ error: 'Photo not found' }, { status: 404 });
+    }
+
+    // Delete file
+    const filePath = path.join(process.cwd(), 'data', 'uploads', reportId, photo.filename);
+    try { await unlink(filePath); } catch { /* file may not exist */ }
+
+    // Delete DB record
+    db.prepare('DELETE FROM photos WHERE id = ?').run(photo_id);
+
+    // Audit
+    db.prepare(`INSERT INTO audit_trail (id, report_id, action, performed_by, details) VALUES (?, ?, ?, ?, ?)`)
+      .run(generateId('AUD'), reportId, 'Photo Deleted', user.name, `Photo ${photo_id} deleted by admin`);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Photo delete error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -148,7 +148,7 @@ export default function PDFPreviewPage() {
     <div className="p-4 print:p-0">
       <style>{`
         @media print {
-          @page { margin: 0; size: A4; }
+          @page { margin: 5mm 3mm 5mm 15mm; size: A4; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
           section { break-inside: avoid; }
         }

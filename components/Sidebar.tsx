@@ -7,7 +7,7 @@ import { logout, getMe, getChatContacts } from '@/lib/api-client';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
-  { href: '/cases', label: 'Cases', icon: CasesIcon },
+  { href: '/cases', label: 'Pending Cases', icon: CasesIcon },
   { href: '/add-case', label: 'Add Case', icon: AddCaseIcon },
   { href: '/upload', label: 'Upload Excel', icon: UploadIcon },
   { href: '/reports', label: 'Reports', icon: ReportsIcon },

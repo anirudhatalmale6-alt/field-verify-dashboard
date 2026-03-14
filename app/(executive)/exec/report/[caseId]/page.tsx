@@ -35,7 +35,7 @@ const HOUSE_TYPES = ['KACCHA', 'PUCCA', 'SEMI PUCCA', 'APARTMENT', 'BUNGALOW', '
 
 const OFFICE_OWNERSHIP_OPTIONS = ['OWNED', 'RENTED', 'SHARED'];
 const COMPANY_BOARD_OPTIONS = ['YES - SEEN', 'NO - NOT SEEN'];
-const SPOUSE_OCC_OPTIONS = ['HOUSEWIFE', 'SALARIED', 'SELF EMPLOYED', 'BUSINESS', 'STUDENT', 'OTHER'];
+const SPOUSE_OCC_OPTIONS = ['HOUSEWIFE', 'UNMARRIED', 'SALARIED', 'SELF EMPLOYED', 'BUSINESS', 'STUDENT', 'OTHER'];
 
 const MIN_PHOTOS = 4;
 
@@ -176,6 +176,13 @@ export default function VerificationFormPage() {
     // Section 3 & 4: House Details + Rental — only if RVR or RESI CUM OFFICE (skip for BVR)
     if (form.rvr_or_bvr !== 'BVR') {
       sections.push({ key: 'house_details', title: 'House Details' });
+      // If DOOR LOCK, skip remaining sections — go straight to TPC & Remarks
+      if (form.ownership_details === 'DOOR LOCK') {
+        sections.push({ key: 'tpc_remarks', title: 'TPC & Remarks' });
+        sections.push({ key: 'photos', title: 'Photos' });
+        sections.push({ key: 'review', title: 'Review & Submit' });
+        return sections;
+      }
       sections.push({ key: 'rental_duration', title: 'Rental & Duration' });
     }
 
@@ -199,7 +206,7 @@ export default function VerificationFormPage() {
     sections.push({ key: 'review', title: 'Review & Submit' });
 
     return sections;
-  }, [form.address_confirmed, form.rvr_or_bvr, form.customer_occ_category]);
+  }, [form.address_confirmed, form.rvr_or_bvr, form.customer_occ_category, form.ownership_details]);
 
   // Clamp currentSectionIdx when activeSections shrinks
   useEffect(() => {
@@ -717,10 +724,23 @@ export default function VerificationFormPage() {
           <div>
             <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Ownership Details</label>
             <div className="flex flex-wrap gap-2">
-              {['OWNED', 'RENTED', 'COMPANY PROVIDED', 'OTHERS'].map(opt => (
+              {['OWNED', 'RENTED', 'COMPANY PROVIDED', 'DOOR LOCK', 'OTHERS'].map(opt => (
                 <button
                   key={opt}
-                  onClick={() => updateForm('ownership_details', opt)}
+                  onClick={() => {
+                    updateForm('ownership_details', opt);
+                    if (opt === 'DOOR LOCK') {
+                      // Auto-fill TPC and remarks for Door Lock
+                      setForm(prev => ({
+                        ...prev,
+                        ownership_details: opt,
+                        tpc_neighbour_name: prev.tpc_neighbour_name || 'Door Locked — No TPC available',
+                        special_remarks: prev.special_remarks
+                          ? (prev.special_remarks.includes('DOOR LOCK') ? prev.special_remarks : prev.special_remarks + '\nDOOR LOCK — Premises was locked during visit.')
+                          : 'DOOR LOCK — Premises was locked during visit.'
+                      }));
+                    }
+                  }}
                   className={`px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
                     form.ownership_details === opt ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'
                   }`}
@@ -846,29 +866,34 @@ export default function VerificationFormPage() {
           <FormField label="Years in Business" value={form.years_in_business} onChange={v => updateForm('years_in_business', v)} />
           <FormField label="Office Location / Address" value={form.office_location} onChange={v => updateForm('office_location', v)} multiline />
           <FormField label="Office Area (Sqft)" value={form.office_area_sqft} onChange={v => updateForm('office_area_sqft', v)} />
-          <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Office Setup Seen?</label>
-            <div className="flex gap-2">
-              {['YES', 'NO'].map(opt => (
-                <button
-                  key={opt}
-                  onClick={() => updateForm('office_setup_seen', opt)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                    form.office_setup_seen === opt ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'
-                  }`}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-          <FormField label="No. of Employees Seen" value={form.employees_seen} onChange={v => updateForm('employees_seen', v)} />
-          <DropdownField
-            label="Company Name Board"
-            value={form.company_name_board}
-            options={COMPANY_BOARD_OPTIONS}
-            onChange={v => updateForm('company_name_board', v)}
-          />
+          {/* Office Setup, Employees, Name Board — only show for BVR */}
+          {form.rvr_or_bvr === 'BVR' && (
+            <>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Office Setup Seen?</label>
+                <div className="flex gap-2">
+                  {['YES', 'NO'].map(opt => (
+                    <button
+                      key={opt}
+                      onClick={() => updateForm('office_setup_seen', opt)}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                        form.office_setup_seen === opt ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <FormField label="No. of Employees Seen" value={form.employees_seen} onChange={v => updateForm('employees_seen', v)} />
+              <DropdownField
+                label="Company Name Board"
+                value={form.company_name_board}
+                options={COMPANY_BOARD_OPTIONS}
+                onChange={v => updateForm('company_name_board', v)}
+              />
+            </>
+          )}
         </div>
       )}
 
@@ -1213,16 +1238,30 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
     setErrorMsg('');
     setStatusMsg('Requesting microphone...');
 
+    // Check if MediaRecorder is available (PWA WebView may not support it)
+    if (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setStatusMsg('');
+      setErrorMsg('RECORDING_NOT_SUPPORTED');
+      return;
+    }
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true }
+      });
 
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : 'audio/mp4';
+      // Find a supported MIME type
+      let mimeType = '';
+      for (const type of ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg', '']) {
+        if (!type || MediaRecorder.isTypeSupported(type)) {
+          mimeType = type;
+          break;
+        }
+      }
 
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
       chunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
@@ -1381,8 +1420,26 @@ function VoiceRemarkField({ value, onChange }: { value: string; onChange: (v: st
         </div>
       )}
 
+      {/* Recording not supported in PWA */}
+      {errorMsg === 'RECORDING_NOT_SUPPORTED' && (
+        <div className="mt-2 px-3 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+          <p className="text-xs text-amber-800 font-bold mb-2">Voice recording is not supported in this app mode.</p>
+          <p className="text-[11px] text-amber-900 mb-2">Please use one of these alternatives:</p>
+          <div className="space-y-2 text-[11px] text-amber-900">
+            <p>1. Open <strong>app.kospl.in</strong> in Chrome browser instead of the home screen app</p>
+            <p>2. Use the &quot;Upload Audio&quot; button below to record using your phone&apos;s voice recorder app first, then upload</p>
+          </div>
+          <button
+            onClick={() => audioInputRef.current?.click()}
+            className="mt-3 px-4 py-2 bg-amber-600 text-white text-xs font-bold rounded-lg w-full"
+          >
+            Upload Audio File Instead
+          </button>
+        </div>
+      )}
+
       {/* Other errors */}
-      {errorMsg && errorMsg !== 'MIC_BLOCKED' && (
+      {errorMsg && errorMsg !== 'MIC_BLOCKED' && errorMsg !== 'RECORDING_NOT_SUPPORTED' && (
         <div className="mt-1.5 px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-xs text-red-600 font-medium">{errorMsg}</p>
         </div>
